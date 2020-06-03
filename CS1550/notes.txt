@@ -94,3 +94,65 @@ Zombie Process
 Process Termination
   parent can abort() a child if needed
 
+5/28/2020
+ThreadTest.java
+for(int i=0; i<3; i++) {
+  pthread_create(&tid[i], &attr, runner, (void *)((long long) i));
+}
+  //thread - children share heap/code/global vars of parent
+
+void *runner(void *param) {
+  int i = ((int)param);
+  printf("%d param = %d\n", (int)tid[i], i);
+  sum[i] = 0;
+  for (int j=1; j<=n; j++) 
+    sum[i] += j;
+  pthread_exit(0);
+}
+
+Multiprocessing Bugs
+
+Bounded Buffer Problem
+  Circle Queue
+  Producer process - adds to queue, increments size
+  Consumer process - removes from queue, decrements size
+Problem: Race Conditions
+updating memory is not atomic (uninterruptable)
+
+When it works
+x==3
+P1	P2
+R1<=x		load
+R1=R1+1		change
+R1=>x		store
+	R3<=x	load
+	R3=R3+1	change
+	R3=>x	store
+x==5
+
+When it gets interrupted (BUG)
+x==3
+P1	P2
+R1<=x		load
+	R3<=x	load
+	R3=R3+1	change
+R1=R1+1		change
+R1=>x		store
+	R1=>x	store
+x==4
+
+1 thread at a time:
+private synchronized void addSum (Integer sum)
+  sums.add(sum);
+
+Critical Regions
+  used to procide *mutual exclusion* and help fix race conditions
+4 conditions for mutual exclusion
+  1. No 2 processes simultaneously in critical region
+  2. No assumptions about the speeds or number of CPUs
+  3. No process outside of critical region can block another process
+  4. No process must wait forever to enter its critical region
+
+Busy Waiting: Strict Alternation
+Use shared variable (turn) to keep track of whose turn
+
