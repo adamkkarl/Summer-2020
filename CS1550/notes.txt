@@ -155,4 +155,95 @@ Critical Regions
 
 Busy Waiting: Strict Alternation
 Use shared variable (turn) to keep track of whose turn
+Continuously spins reading variable until it sees it can procede (spin lock)
+Avoids race conditions, but fails #3 if critical region finishes, but interrupts before changes turn value
 
+*Doesn't work with modern out-of-order compilers, might increment turn before critical region executes
+
+Busy Waiting: Working Solution
+void enter_region(int process) {
+  int turn; //whose turn is it
+  int interested[N]; //set to TRUE if process j is interested
+  while (turn==other && interested[other]==TRUE) //solves #3 criteria
+    ;
+{
+
+void leave_region(int process)
+  interested[process] = FALSE;
+
+Hardware for Synchronization
+software sync works, but may be complex and busy waiting wastes CPU time
+methods:
+  Test and Sit - test variable and set it in 1 clock cycle
+  Atomic Swap - swap register and memory in 1 clock cycle
+  Turn off interrupts - disable interrupts during critical section
+    dangerous: can hijack CPU
+
+int lock = 0; //lock open
+
+TEST AND SET
+while (TestAndSet(lock))
+  ;
+//critical section
+lock = 0
+//noncritical section
+
+SWAP
+while(Swap(lock, 1) == 1)
+  ;
+//critical section
+lock = 0;
+//noncritical section
+
+Basically if lock==0, first come first serve for critical section
+Possible requirements issue -> can have unbounded waiting
+
+Eliminating Busy Waiting
+both harware and software solutions require wasteful spin locks
+
+spin locking efficient if:
+  1. multi-core CPU (might unlock before process gets rotated out)
+  2. short critical section
+  3. few contending processes
+
+Priority Inversion
+when a high priority process has to wait on a low priority process
+solution: *semaphores*
+Down(S): while (S<=0) {}; S-=1;  //also called P()
+Up(S): S+=1;			 //also called V()
+
+Shared variable: Semaphore mutex; //initialize to 1
+	Pi
+while(1) {
+  down(mutex);
+  //CS
+  Up(mutex);
+  //noncrit
+}
+
+SEMAPHORE CODE
+class Semaphore {
+  int val;
+  ProcessList p1;
+  void down();
+  void up();
+};
+
+Semaphore::down() {
+  //lock()
+  val-=1
+  if(val<0)
+    //add process to p1
+    //unlock()
+    sleep()
+}
+
+Semaphore::up() {
+  Process p;
+  //lock()
+  val += 1;
+  if (val<=0)
+    //remove process p from p1
+  wakeup(p)
+  //unlock()
+}
