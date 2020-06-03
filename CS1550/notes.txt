@@ -90,3 +90,7 @@ Zombie Process
   terminated process with parent still running
   process stays alive until parent wait()'s for it
   Bad - will take up memory until parent collects or orphans it
+
+Process Termination
+  parent can abort() a child if needed
+
