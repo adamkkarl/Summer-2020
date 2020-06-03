@@ -47,3 +47,46 @@ Queueing diagram
   -> time slice expires -> ready queue
   -> fork a child -> child executes -> ready queue
   -> wait for interrupt -> interrupt occur -> ready queue
+
+5/26/2020
+fork - system call that creates a process
+child gets new PCB
+  knows pid of parent and copy of all parent's registers
+child gets copy of parent's memory
+
+fork() writes eax register to return a value
+  parent: fork() returns pid of child
+  child: fork() returns 0
+
+ret = fork();
+if (ret>0) {...parent code...}
+if (ret==0){...child code...}
+
+copy_on_write - setting to avoid overhead from forking
+  only copies parent memory to child process memory if necessary
+  NO memory copy on fork
+  useful since often child process is completely different
+    (ex: command line -> java runtime)
+
+Process Creation
+parent processes create children processes, creating tree
+process identifier (pid) - identifies and manages processes
+Resource sharing options:
+  -parent and child chare all resources
+  -children share subset (code, data, heap) of parent resources
+  -parent and child share no resorces
+Execution options
+  -parent and child concurrent
+  -parent wait()'s until children terminate
+
+busy waiting/spinning - executing a long loop of nothing
+  for(int i=0; i<10000000000; i++)
+
+Orphan Process
+  child with terminated parent
+  gets adopted by OS process (id=1)
+
+Zombie Process
+  terminated process with parent still running
+  process stays alive until parent wait()'s for it
+  Bad - will take up memory until parent collects or orphans it
