@@ -1,0 +1,49 @@
+5/21/2020
+CPU
+1. What is a process?
+2. How does context switching happen?
+3. How does scheduling happen?
+4. Bugs due to processes sharing a CPU
+
+process - a program that's running
+  has memory files, registers, process id (pid)
+  
+Process Control Block (PCB)
+  (linux: task control block)
+  pointer to process memory
+  process state (running, waiting, etc)
+  program counter and CPU registers
+  CPU scheduling info
+  memory management info
+  accounting info (CPU used, clock time elapsed, etc)
+  I/O status info
+
+Context switching
+1. CPU stores registers in old PCB
+2. CPU reads registers from new PCB
+  instructions ~1e-9s  mem access ~1e-6s
+  so context switching has significant overhead
+
+Scheduling
+process state - is processs ready to run? waiting for network packet?
+new, ready (in queue), running, waiting (on I/O or event), terminated
+
+Schedulers
+Short-term scheduler (CPU scheduler)
+  selects next process and allocates CPU
+  invoked frequently (ms) - must be fast
+Long-term scheduler
+  selects process to bring to queue
+  infrequent (sec/min) - can be slow
+  controls degree of multiprograming (processes in memory)
+Medium-term scheduling
+  when too many processes fill memory
+  *swap* some out to disk temporarily
+
+Queueing diagram
+-> ready queue -> CPU ->
+  -> terminate
+  -> I/O request -> I/O queue -> I/O -> ready queue
+  -> time slice expires -> ready queue
+  -> fork a child -> child executes -> ready queue
+  -> wait for interrupt -> interrupt occur -> ready queue
