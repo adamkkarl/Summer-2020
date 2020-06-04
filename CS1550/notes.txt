@@ -247,3 +247,63 @@ Semaphore::up() {
   wakeup(p)
   //unlock()
 }
+
+Semaphore Metaphor
+line of people to write on board, 3 markers (S=3)
+or
+red/green light at train junction where 1 gets through at a time (S=1)
+
+6/2
+Critical Section Problem Approaches
+  1. Taking turns - user level software
+  2. Atomic hardware instructions - spin locking
+  3. Semaphores - needs OS support
+
+Process calls down/wait/P on semaphore S to enter critical section
+  -may block
+  -may continue executing
+  -may become ready for execution
+  -requires OS support to take over and carry out system call
+
+Semaphores for synchronization
+Goal: execute B on P1 after A on P0
+
+shared vars
+Semaphore flag = 0; //flag starts down
+
+P0
+//execute A
+flag.up()
+
+P1
+flag.down() //cannot happen until A puts flag up
+//execute B
+
+Types of Semaphores
+Binary Semaphores S=0 or 1
+Counting Semaphores S=2+
+
+Deadlock and Starvation
+Deadlock - 2+ processes waiting for another waiting process
+  P0 has A, needs B
+  P1 has B, needs A
+  each waiting for the other
+  might only happen extremely infrequently when context switches on exact line
+
+Starvation - system making process, but low prio process waits indefinitely since it keeps getting jumped in line
+
+MONITORS
+monitor - another high-level sync primitive
+  -enforces mutual exlusion
+  -only 1 process in monitor at a time
+  -implemented by the language/compiler, can also be implemented with semaphores
+  -Java: public synchronized class MyClass {...}
+
+P0
+myMon.proc1();
+
+P1
+myMon.proc2();
+
+one will execute, other cannot start until first is done
+
