@@ -330,4 +330,41 @@ f1() {x=1; cv.signal(); x=0;}
 f2() {while(x==0) cv.wait(); ...(rest assumes x!=0)
   must use while loop in Mesa semantics, otherwise wakes when x=1 but runs when x=0
 
+Locks and Condition Variables
+monitors require native language support
+  -locks need acquire(), release() to enter/exit monitor
+  -CVs need wait(), signal()
+
+Condition Variable Usage
+  each CV is associated with 1 lock
+  lock must be helpd to use CV
+  waiting on CV releases lock implicitly
+  returning from wait() on CV reacquires the lock
+
+Implementing lock using Semaphores (but not CV support)
+  Hoare semantics (Mesa needs wait() syscall)
+
+class Lock {
+  Semaphore mutex(1); //lock open (1), closed (0)
+  Semaphore next(0);
+  int nextCount = 0;
+};
+
+Lock::Acquire() {mutex.down();}
+
+Lock::Release() {
+  if(nextCount > 0) //if something's waiting on lock
+    next.up() //give lock to next
+  else
+    mutex.up() //open lock
+}
+
+every method in monitor needs to have
+f1() {
+  l.acquire();
+  ...
+  l.release();
+}
+
+
 
