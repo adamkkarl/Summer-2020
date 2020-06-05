@@ -298,12 +298,36 @@ monitor - another high-level sync primitive
   -only 1 process in monitor at a time
   -implemented by the language/compiler, can also be implemented with semaphores
   -Java: public synchronized class MyClass {...}
+    -all Java Objects (string, int, etc) are monitors (toString(), equals(), wait(), notify() are critical)
 
 P0
 myMon.proc1();
-
 P1
 myMon.proc2();
-
 one will execute, other cannot start until first is done
+
+How can a process wait inside a monitor?
+  -cannot sleep, would block others from entering
+  -Soln: use condition variable
+
+Condition Variables: support 2 ops
+  wait(): suspend process until signaled
+  signal(): wake up 1 process waiting on condition variable (if any)
+condition variables are only usable withing monitors
+
+When signaling process P0 signals waiting process P1
+  -Mesa semantics: P0 continues running
+  -Hoare semantics: P1 runs within monitor
+    can be implemented with semaphores
+    useful when condition P1 waited on might not still be true once P0 leaves monitor
+
+P0: m.f1();
+P1: m.f2();
+Monitor
+int x=0;
+Cv cv;
+f1() {x=1; cv.signal(); x=0;}
+f2() {while(x==0) cv.wait(); ...(rest assumes x!=0)
+  must use while loop in Mesa semantics, otherwise wakes when x=1 but runs when x=0
+
 
