@@ -367,4 +367,36 @@ f1() {
 }
 
 
+Quiz 6/6 
+The operating system continuously runs on the CPU and is always resident in memory: FALSE
+With modern hardware and out-of-order execution with multipple cores, it's possible to solve Critical Section problems with software alone: FALSE
+Assuming lock is a shared int, starting with lock==0, if 2 processes concurrently execute TestAndSet(lock) they will both get 1 as a return val: FALSE
+A shared int that's used to implement a spinlock using TestAndSet should be initialized to 0,whereas a semaphore used to implement sleeplock should be initialized to 1: TRUE
+When the following runs, fork will be called a total of 4 times:
+  int main() {fork(); fork(); fork(); fork();} : FALSE
+Copy-on-Write is a mechanism that avoids unneccessary memory copying when fork() is immediately followed by exec() in the child process: TRUE
+All processes createdd using fork() have a process ID of 0: FALSE
+Zombie processes waste system resources because the operating system does not free up their resources until their parents wait() on them: TRUE
+On a single-core system, since the CPU can do only one thing at a time, there is no need to protect shared data in a multi-process application: FALSE
+The code below is free from race conditions since every access to the shared variable x is surrounded by a lock/unlock pair
+  int x=0;
+  Lock l;
+  l.acquire();
+  if (x==0) {
+    l.release();
+    l.acquire();
+    x++;
+  }
+  l.release();
+  FALSE **
+Each running thread has its own register set and stack: TRUE
+A CPU-bounded process may not issue any input/output operations: FALSE
+Threads are cheaper to context switch than processes: TRUE
+In a single-core system, it is safe to assume that mutual exclusion is guaranteed when interrupts are disabled around a critical section: FALSE **
+The stack of a thread can be corrupted by a thread of another process: FALSE
+System calls change the privelege mode of the processor: TRUE
+Microkernel operating systems are faster then monolithic systems: FALSE
+Threads are cheaper to create than processes: TRUE
+Consider parent Process P forks child process C. When P terminates, C becomes a zombie: FALSE
+Which is not part of the OS: interrupt service routines, system call implementations, interrupt descriptor table, system call table, INTERRUPT DESCRIPTOR TABLE REGISTER
 
