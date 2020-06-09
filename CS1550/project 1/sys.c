@@ -2357,3 +2357,52 @@ int orderly_poweroff(bool force)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(orderly_poweroff);
+
+/* START PROJECT 2 CODE */
+
+//semaphore node
+struct cs1550_sem
+{
+    int value;
+    int sem_id;
+    spinlock_t lock;
+    char key[32];
+    cs1550_sem *next;
+};
+
+/* This syscall creates a new semaphore and stores the provided key to protect 
+ * access to the semaphore. The integer value is used to initialize the semaphore's
+ * value. The function returns the identifier of the created semaphore, which can be
+ * used to down and up the semaphore. */
+asmlinkage long sys_cs1550_create(int value, char key[32]) {
+    return 5;
+}
+
+/* This syccall opens n already created semaphore by providing the correct key. The
+ * function returns the identifier of the opened semaphore if the key matches the stored
+ * key of -1 otherwise */
+asmlinkage long sys_cs1550_open(char key[32]) {
+    return -1;
+}
+
+/* This syscall implements the down operation on an already opened semaphore using ther
+ * semaphore identifier obtained from a previous call to sys_cs1550_create or sys_cs1550_open.
+ * the function returns a 0 when successful or -1 otherwise (e.g. if the semaphore id is invalid
+ * or if the queue is full). Please check lecture slides for the pseudocode of the down operation */
+asmlinkage long sys_cs1550_down(int sem_id) {
+    return -1;
+}
+
+/* This syscall implements the up operation on an already opened semaphore using athe semaphore 
+ * identifier obtained from a previos call to sys_cs1550_create or sys_cs1550_open. The function
+ * returns 0 when successful or -1 otherwise (e.g. if the semaphore id is invalid). */
+asmlinkage long sys_cs1550_up(int sem_id) {
+    return -1;
+}
+
+/* This syscall removes an already created semaphore from the system-wise semaphore list using 
+ * the semaphore identifier obtained from a previous call to sys_cs1550_create or sys_cs1550_open.
+ * The function returns 0 when successful of -1 otherwise (e.g. if the semaphore id is invalid */
+asmlinkage long sys_cs1550_close(int sem_id) {
+    return -1;
+}

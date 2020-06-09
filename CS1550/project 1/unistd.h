@@ -330,6 +330,11 @@
 #define __NR_timerfd		322
 #define __NR_eventfd		323
 #define __NR_fallocate		324
+#define __NR_sys_cs1550_create  325
+#define __NR_sys_cs1550_open    326
+#define __NR_sys_cs1550_down    327
+#define __NR_sys_cs1550_up  328
+#define __NR_sys_cs1550_open    329
 
 #ifdef __KERNEL__
 

@@ -324,3 +324,8 @@ ENTRY(sys_call_table)
 	.long sys_timerfd
 	.long sys_eventfd
 	.long sys_fallocate
+    .long sys_cs1550_create /* 325 */
+    .long sys_cs1550_open   /* 326 */
+    .long sys_cs1550_down   /* 327 */
+    .long sys_cs1550_up     /* 328 */
+    .long sys_cs1550_close  /* 329 */
