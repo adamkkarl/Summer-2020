@@ -367,6 +367,29 @@ f1() {
 }
 
 
+Implementing Condition Variables
+
+class Condition {
+  Lock *lock;
+  Semaphore condSem(0);
+  int semCount = 0; //number waiting on condition variable (in monitor)
+}
+
+Condition::Wait() {
+  semCount+=1;
+  if(lock->nextCount > 0) 
+    lock->nextUp(); //wake process from next queue (in monitor)
+  else
+    lock->next.up(); //if none, wake process waiting FOR monitor
+  condSem.down(); //send self to sleep
+  semCount-=1;
+}
+
+Condition::Signal() {
+  if(semCount > 0) {
+    lock
+
+
 Quiz 6/6 
 The operating system continuously runs on the CPU and is always resident in memory: FALSE
 With modern hardware and out-of-order execution with multipple cores, it's possible to solve Critical Section problems with software alone: FALSE
