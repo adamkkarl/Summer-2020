@@ -2359,50 +2359,107 @@ int orderly_poweroff(bool force)
 EXPORT_SYMBOL_GPL(orderly_poweroff);
 
 /* START PROJECT 2 CODE */
+int nextId = 1001; //chose 1001 arbitrarily
+cs1550_sem *head = NULL; //points to first semaphore
 
 //semaphore node
-struct cs1550_sem
-{
+struct cs1550_sem {
     int value;
     int sem_id;
     spinlock_t lock;
     char key[32];
-    cs1550_sem *next;
+    cs1550_sem *nextSem;
 };
-
 /* This syscall creates a new semaphore and stores the provided key to protect 
- * access to the semaphore. The integer value is used to initialize the semaphore's
+ * access to the semaphore. The integer value is used to initialize the semaphore's 
  * value. The function returns the identifier of the created semaphore, which can be
  * used to down and up the semaphore. */
-asmlinkage long sys_cs1550_create(int value, char key[32]) {
-    return 5;
+asmlinkage long sys_cs1550_create(int myValue, char myKey[32]) {
+    cs1550_sem *newSem = (struct cs1550*) kmalloc(sizeof(struct cs1550_sem));
+    newSem->value = myValue;
+    newSem->sem_id = nextId++; //consult global var
+    newSem->lock = spin_lock_init(newSem->lock); //&&&?
+    newSem->key = myKey;
+
+    //insert new semaphore node at head of linked list
+    newSem->nextSem = head;
+    head = newSem;
+
+   return head->sem_id; 
 }
 
-/* This syccall opens n already created semaphore by providing the correct key. The
+/* This syccall opens a already created semaphore by providing the correct key. The
  * function returns the identifier of the opened semaphore if the key matches the stored
- * key of -1 otherwise */
+ * key of -1 otherwise 
+ */
 asmlinkage long sys_cs1550_open(char key[32]) {
+    cs1550_sem *temp = head;
+    while(temp != NULL) {
+        if(strcmp(key, temp->key) == 0) {
+            //found semaphore
+           return temp->sem_id;
+        }
+        temp = temp->nextSem;
+    }
     return -1;
 }
 
-/* This syscall implements the down operation on an already opened semaphore using ther
+/* This syscall implements the down operation on an already opened semaphore using the
  * semaphore identifier obtained from a previous call to sys_cs1550_create or sys_cs1550_open.
  * the function returns a 0 when successful or -1 otherwise (e.g. if the semaphore id is invalid
- * or if the queue is full). Please check lecture slides for the pseudocode of the down operation */
+ * or if the queue is full). Please check lecture slides for the pseudocode of the down operation
+ */
 asmlinkage long sys_cs1550_down(int sem_id) {
+    cs1550_sem *temp = head;
+    while(temp != NULL) {
+        if(temp->sem_id == sem_id) {
+            //found semaphore
+            //TODO: IMPLEMENT DOWN
+            return 0;
+        }
+        
+        temp = temp->nextSem;
+    }
     return -1;
 }
-
-/* This syscall implements the up operation on an already opened semaphore using athe semaphore 
+ /* This syscall implements the up operation on an already opened semaphore using athe semaphore 
  * identifier obtained from a previos call to sys_cs1550_create or sys_cs1550_open. The function
- * returns 0 when successful or -1 otherwise (e.g. if the semaphore id is invalid). */
+ * returns 0 when successful or -1 otherwise (e.g. if the semaphore id is invalid).
+ */
+
 asmlinkage long sys_cs1550_up(int sem_id) {
+    cs1550_sem *temp = head;
+    while(temp != NULL) {
+        if(temp->sem_id == sem_id) {
+            //found semaphore
+            //TODO: IMPLEMENT UP
+            return 0;
+        }
+        temp = temp->nextSem;
+    }
     return -1;
 }
 
 /* This syscall removes an already created semaphore from the system-wise semaphore list using 
  * the semaphore identifier obtained from a previous call to sys_cs1550_create or sys_cs1550_open.
- * The function returns 0 when successful of -1 otherwise (e.g. if the semaphore id is invalid */
+ * The function returns 0 when successful of -1 otherwise (e.g. if the semaphore id is invalid
+ */
 asmlinkage long sys_cs1550_close(int sem_id) {
+    cs1550_sem *temp = head;
+    if(temp == NULL) {
+        return -1;
+    }
+
+    while(temp->next != NULL) {
+        if(temp->nextSem->sem_id == sem_id) {
+            //found semaphore
+            cs1550_sem *toFree = temp->nextSem;
+            temp->nextSem = temp->nextSem->nextSem;
+            //if(toFree has no processes TODO
+            kfree(toFree);
+            return 0;
+        }
+        temp = temp->nextSem;
+    }
     return -1;
 }
