@@ -2368,17 +2368,6 @@ struct processNode {
     struct processNode *next;
 };
 
-/* Given a node to insert and a head, insert the new node at the end of the linked list*/
-/* return 0 on success */
-int enqueueProcess(struct processNode *head, struct processNode *newNode) {
-    if(head->next == NULL) {
-        head->next = newNode;
-        return 0;
-    } else {
-        return enqueueProcess(head->next, newNode);
-    }
-}
-
 //semaphore node
 struct cs1550_sem {
     int value;
@@ -2387,24 +2376,42 @@ struct cs1550_sem {
     char key[32];
     struct processNode *processListHead;
     struct cs1550_sem *nextSem;
-    
 };
+
+/* Given a node to insert and a head, insert the new node at the end of the linked list*/
+/* return 0 on success */
+int enqueueProcess(struct processNode *processHead, struct processNode *newNode) {
+    if(processHead->next == NULL) {
+        processHead->next = newNode;
+        return 0;
+    }
+
+    while(processHead->next != NULL) {
+        processHead = processHead->next;
+    }
+    processHead->next = newNode;
+    return 0;
+}
+
 /* This syscall creates a new semaphore and stores the provided key to protect 
  * access to the semaphore. The integer value is used to initialize the semaphore's 
  * value. The function returns the identifier of the created semaphore, which can be
  * used to down and up the semaphore. */
 asmlinkage long sys_cs1550_create(int myValue, char myKey[32]) {
-    struct cs1550_sem *newSem = (struct cs1550_sem*) kmalloc(sizeof(struct cs1550_sem), GFP_KERNEL);
+    struct cs1550_sem *newSem;
+
+    newSem = (struct cs1550_sem*) kmalloc(sizeof(struct cs1550_sem), GFP_KERNEL);
+    newSem->processListHead = NULL;
     newSem->value = myValue;
     newSem->sem_id = nextId++; //consult global var
-    spin_lock_init(&(newSem->lock)); //&?
-    strcpy(newSem->key, myKey);
 
     //insert new semaphore node at head of linked list
     newSem->nextSem = head;
     head = newSem;
 
-   return head->sem_id; 
+    spin_lock_init(&(newSem->lock)); //&?
+    strcpy(newSem->key, myKey);
+    return head->sem_id; 
 }
 
 /* This syccall opens a already created semaphore by providing the correct key. The
@@ -2443,9 +2450,13 @@ asmlinkage long sys_cs1550_down(int sem_id) {
                 newNode->next = NULL;
 
                 //add current process to processList
-                enqueueProcess(temp->processListHead, newNode);
+                if(temp->processListHead == NULL) {
+                    temp->processListHead = newNode;
+                } else {
+                    enqueueProcess(temp->processListHead, newNode);
+                }
                 set_current_state(TASK_INTERRUPTIBLE);
-                spin_unlock(&(temp->lock)); //TODO needed?
+                //spin_unlock(&(temp->lock)); //TODO needed?
                 schedule();
             }
             spin_unlock(&(temp->lock));
@@ -2465,8 +2476,7 @@ asmlinkage long sys_cs1550_up(int sem_id) {
     struct cs1550_sem *temp = head;
     while(temp != NULL) {
         if(temp->sem_id == sem_id) {
-            //found semaphore
-            //TODO: IMPLEMENT UP
+            //IMPLEMENT UP
             spin_lock(&(temp->lock));
             temp->value += 1;
             if (temp->value <= 0) {
@@ -2501,7 +2511,7 @@ asmlinkage long sys_cs1550_close(int sem_id) {
             //found semaphore
             struct cs1550_sem *toFree = temp->nextSem;
             temp->nextSem = temp->nextSem->nextSem;
-            //if(toFree has no processes TODO
+            //if(toFree has no processes TODO ?
             kfree(toFree);
             return 0;
         }
