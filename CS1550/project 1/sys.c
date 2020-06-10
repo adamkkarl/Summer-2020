@@ -2362,13 +2362,31 @@ EXPORT_SYMBOL_GPL(orderly_poweroff);
 int nextId = 1001; //chose 1001 arbitrarily
 cs1550_sem *head = NULL; //points to first semaphore
 
+//processList node
+struct processNode {
+    struct task_struct *process;
+    processNode *next;
+}
+
+/* Given a node to insert and a head, insert the new node at the end of the linked list*/
+int enqueueProcess(processNode *head, processNode *newNode) {
+    if(head->next == NULL) {
+        head->next = newNode;
+        return 0;
+    } else {
+        return enqueueProcess(head->next, newNode);
+    }
+}
+
 //semaphore node
 struct cs1550_sem {
     int value;
     int sem_id;
     spinlock_t lock;
     char key[32];
+    processNode *processListHead;
     cs1550_sem *nextSem;
+    
 };
 /* This syscall creates a new semaphore and stores the provided key to protect 
  * access to the semaphore. The integer value is used to initialize the semaphore's 
@@ -2378,7 +2396,7 @@ asmlinkage long sys_cs1550_create(int myValue, char myKey[32]) {
     cs1550_sem *newSem = (struct cs1550*) kmalloc(sizeof(struct cs1550_sem));
     newSem->value = myValue;
     newSem->sem_id = nextId++; //consult global var
-    newSem->lock = spin_lock_init(newSem->lock); //&&&?
+    newSem->lock = spin_lock_init(&(newSem->lock));
     newSem->key = myKey;
 
     //insert new semaphore node at head of linked list
@@ -2415,6 +2433,21 @@ asmlinkage long sys_cs1550_down(int sem_id) {
         if(temp->sem_id == sem_id) {
             //found semaphore
             //TODO: IMPLEMENT DOWN
+            spin_lock(&(temp->lock));
+            temp->val -= 1;
+            if(temp->val < 0) {
+                //create processNode from current process
+                struct processNode *newNode = (struct *processNode) kmalloc(sizeof(struct processNode));
+                newNode->process = current; //current is a global variable pointing to current process
+                newMode->next = NULL;
+
+                //add current process to processList
+                enqueueProcess(temp->processListHead, newNode);
+                set_current_state(TASK_INTERRUPTABLE);
+                spin_unlock(&(temp->lock)); //TODO needed?
+                schedule();
+            }
+            spin_unlock(&(temp->lock));
             return 0;
         }
         
@@ -2433,6 +2466,19 @@ asmlinkage long sys_cs1550_up(int sem_id) {
         if(temp->sem_id == sem_id) {
             //found semaphore
             //TODO: IMPLEMENT UP
+            struct taskStruct *P;
+            spin_lock(&(temp->lock));
+            temp->val += 1;
+            if (temp->val <= 0) {
+                struct taskStruct *P = temp->processListHead->process;
+                //TODO is it possible there's no processes waiting?
+                struct processNode *toFree = temp->processListHead;
+                temp->processListHead = temp->processListHead->next; //dequeue process
+                kfree(toFree);
+                wake_up_process(P);
+            }
+            
+            spin_unlock(&(temp->lock));
             return 0;
         }
         temp = temp->nextSem;
