@@ -330,15 +330,15 @@
 #define __NR_timerfd		322
 #define __NR_eventfd		323
 #define __NR_fallocate		324
-#define __NR_sys_cs1550_create  325
-#define __NR_sys_cs1550_open    326
-#define __NR_sys_cs1550_down    327
-#define __NR_sys_cs1550_up  328
-#define __NR_sys_cs1550_close   329
+#define __NR_cs1550_create  325
+#define __NR_cs1550_open    326
+#define __NR_cs1550_down    327
+#define __NR_cs1550_up  328
+#define __NR_cs1550_close   329
 
 #ifdef __KERNEL__
 
-#define NR_syscalls 325
+#define NR_syscalls 330
 
 #define __ARCH_WANT_IPC_PARSE_VERSION
 #define __ARCH_WANT_OLD_READDIR
