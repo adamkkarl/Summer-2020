@@ -2360,16 +2360,17 @@ EXPORT_SYMBOL_GPL(orderly_poweroff);
 
 /* START PROJECT 2 CODE */
 int nextId = 1001; //chose 1001 arbitrarily
-cs1550_sem *head = NULL; //points to first semaphore
+struct cs1550_sem *head = NULL; //points to first semaphore
 
 //processList node
 struct processNode {
     struct task_struct *process;
-    processNode *next;
-}
+    struct processNode *next;
+};
 
 /* Given a node to insert and a head, insert the new node at the end of the linked list*/
-int enqueueProcess(processNode *head, processNode *newNode) {
+/* return 0 on success */
+int enqueueProcess(struct processNode *head, struct processNode *newNode) {
     if(head->next == NULL) {
         head->next = newNode;
         return 0;
@@ -2384,8 +2385,8 @@ struct cs1550_sem {
     int sem_id;
     spinlock_t lock;
     char key[32];
-    processNode *processListHead;
-    cs1550_sem *nextSem;
+    struct processNode *processListHead;
+    struct cs1550_sem *nextSem;
     
 };
 /* This syscall creates a new semaphore and stores the provided key to protect 
@@ -2393,11 +2394,11 @@ struct cs1550_sem {
  * value. The function returns the identifier of the created semaphore, which can be
  * used to down and up the semaphore. */
 asmlinkage long sys_cs1550_create(int myValue, char myKey[32]) {
-    cs1550_sem *newSem = (struct cs1550*) kmalloc(sizeof(struct cs1550_sem));
+    struct cs1550_sem *newSem = (struct cs1550_sem*) kmalloc(sizeof(struct cs1550_sem), GFP_KERNEL);
     newSem->value = myValue;
     newSem->sem_id = nextId++; //consult global var
-    newSem->lock = spin_lock_init(&(newSem->lock));
-    newSem->key = myKey;
+    spin_lock_init(&(newSem->lock)); //&?
+    strcpy(newSem->key, myKey);
 
     //insert new semaphore node at head of linked list
     newSem->nextSem = head;
@@ -2411,7 +2412,7 @@ asmlinkage long sys_cs1550_create(int myValue, char myKey[32]) {
  * key of -1 otherwise 
  */
 asmlinkage long sys_cs1550_open(char key[32]) {
-    cs1550_sem *temp = head;
+    struct cs1550_sem *temp = head;
     while(temp != NULL) {
         if(strcmp(key, temp->key) == 0) {
             //found semaphore
@@ -2428,22 +2429,22 @@ asmlinkage long sys_cs1550_open(char key[32]) {
  * or if the queue is full). Please check lecture slides for the pseudocode of the down operation
  */
 asmlinkage long sys_cs1550_down(int sem_id) {
-    cs1550_sem *temp = head;
+    struct cs1550_sem *temp = head;
     while(temp != NULL) {
         if(temp->sem_id == sem_id) {
             //found semaphore
             //TODO: IMPLEMENT DOWN
             spin_lock(&(temp->lock));
-            temp->val -= 1;
-            if(temp->val < 0) {
+            temp->value -= 1;
+            if(temp->value < 0) {
                 //create processNode from current process
-                struct processNode *newNode = (struct *processNode) kmalloc(sizeof(struct processNode));
+                struct processNode *newNode = (struct processNode*) kmalloc(sizeof(struct processNode), GFP_KERNEL);
                 newNode->process = current; //current is a global variable pointing to current process
-                newMode->next = NULL;
+                newNode->next = NULL;
 
                 //add current process to processList
                 enqueueProcess(temp->processListHead, newNode);
-                set_current_state(TASK_INTERRUPTABLE);
+                set_current_state(TASK_INTERRUPTIBLE);
                 spin_unlock(&(temp->lock)); //TODO needed?
                 schedule();
             }
@@ -2461,16 +2462,15 @@ asmlinkage long sys_cs1550_down(int sem_id) {
  */
 
 asmlinkage long sys_cs1550_up(int sem_id) {
-    cs1550_sem *temp = head;
+    struct cs1550_sem *temp = head;
     while(temp != NULL) {
         if(temp->sem_id == sem_id) {
             //found semaphore
             //TODO: IMPLEMENT UP
-            struct taskStruct *P;
             spin_lock(&(temp->lock));
-            temp->val += 1;
-            if (temp->val <= 0) {
-                struct taskStruct *P = temp->processListHead->process;
+            temp->value += 1;
+            if (temp->value <= 0) {
+                struct task_struct *P = temp->processListHead->process;
                 //TODO is it possible there's no processes waiting?
                 struct processNode *toFree = temp->processListHead;
                 temp->processListHead = temp->processListHead->next; //dequeue process
@@ -2491,15 +2491,15 @@ asmlinkage long sys_cs1550_up(int sem_id) {
  * The function returns 0 when successful of -1 otherwise (e.g. if the semaphore id is invalid
  */
 asmlinkage long sys_cs1550_close(int sem_id) {
-    cs1550_sem *temp = head;
+    struct cs1550_sem *temp = head;
     if(temp == NULL) {
         return -1;
     }
 
-    while(temp->next != NULL) {
+    while(temp->nextSem != NULL) {
         if(temp->nextSem->sem_id == sem_id) {
             //found semaphore
-            cs1550_sem *toFree = temp->nextSem;
+            struct cs1550_sem *toFree = temp->nextSem;
             temp->nextSem = temp->nextSem->nextSem;
             //if(toFree has no processes TODO
             kfree(toFree);

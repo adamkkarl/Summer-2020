@@ -334,7 +334,7 @@
 #define __NR_sys_cs1550_open    326
 #define __NR_sys_cs1550_down    327
 #define __NR_sys_cs1550_up  328
-#define __NR_sys_cs1550_open    329
+#define __NR_sys_cs1550_close   329
 
 #ifdef __KERNEL__
 
