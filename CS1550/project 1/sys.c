@@ -2359,16 +2359,17 @@ int orderly_poweroff(bool force)
 EXPORT_SYMBOL_GPL(orderly_poweroff);
 
 /* START PROJECT 2 CODE */
-int nextId = 1001; //chose 1001 arbitrarily
-struct cs1550_sem *head = NULL; //points to first semaphore
 
-//processList node
+int nextId = 1001; //chose 1001 arbitrarily for first semaphore id
+struct cs1550_sem *head = NULL; //global variable points to first semaphore
+
+//Node for linked list of processes
 struct processNode {
-    struct task_struct *process;
+    struct task_struct *process; 
     struct processNode *next;
 };
 
-//semaphore node
+//Node for linked list of semaphores
 struct cs1550_sem {
     int value;
     int sem_id;
@@ -2381,26 +2382,27 @@ struct cs1550_sem {
 /* Given a node to insert and a head, insert the new node at the end of the linked list*/
 /* return 0 on success */
 void enqueueProcess(struct processNode *processHead, struct processNode *newNode) {
-    printk(KERN_WARNING "enqueueing baby\n");
     if(processHead->next == NULL) {
+        //first process
+        processHead->next = newNode;
+        return;
+    } else {
+        //not first process: put it at the end
+        while(processHead->next != NULL) {
+            processHead = processHead->next;
+        }
         processHead->next = newNode;
         return;
     }
-
-    while(processHead->next != NULL) {
-        processHead = processHead->next;
-    }
-    processHead->next = newNode;
-    return;
 }
 
 /* This syscall creates a new semaphore and stores the provided key to protect 
  * access to the semaphore. The integer value is used to initialize the semaphore's 
  * value. The function returns the identifier of the created semaphore, which can be
- * used to down and up the semaphore. */
+ * used to down and up the semaphore. 
+ */
 asmlinkage long sys_cs1550_create(int myValue, char myKey[32]) {
     struct cs1550_sem *newSem;
-//    printk(KERN_WARNING "creating a semaphore\n");
 
     newSem = (struct cs1550_sem*) kmalloc(sizeof(struct cs1550_sem), GFP_KERNEL);
     newSem->processListHead = NULL;
@@ -2422,14 +2424,14 @@ asmlinkage long sys_cs1550_create(int myValue, char myKey[32]) {
  */
 asmlinkage long sys_cs1550_open(char key[32]) {
     struct cs1550_sem *temp = head;
-//    printk(KERN_WARNING "opening\n");
-    while(temp != NULL) {
+    while(temp != NULL) { //cycle through semaphore list
         if(strcmp(key, temp->key) == 0) {
             //found semaphore
            return temp->sem_id;
         }
         temp = temp->nextSem;
     }
+    //semaphore with that key not found
     return -1;
 }
 
@@ -2440,10 +2442,8 @@ asmlinkage long sys_cs1550_open(char key[32]) {
  */
 asmlinkage long sys_cs1550_down(int id) {
     struct cs1550_sem *temp = head;
-//    printk(KERN_WARNING "downing semaphore %d\n", id);
-    while(temp != NULL) {
+    while(temp != NULL) { //cycle through semaphore list
         if(temp->sem_id == id) {
-//           printk(KERN_WARNING "found sem to down on\n");
             //found semaphore
             //IMPLEMENT DOWN
             spin_lock(&(temp->lock));
@@ -2456,25 +2456,24 @@ asmlinkage long sys_cs1550_down(int id) {
 
                 //add current process to processList
                 if(temp->processListHead == NULL) {
-//                    printk(KERN_WARNING "adding to head\n");
+                    //first process to wait
                     temp->processListHead = newNode;
                 } else {
-//                    printk(KERN_WARNING "adding to end\n");
+                    //other processes already waiting
                     enqueueProcess(temp->processListHead, newNode);
                 }
                 set_current_state(TASK_INTERRUPTIBLE);
-                spin_unlock(&(temp->lock));
-                schedule();
-//                printk(KERN_WARNING "woke from sleep\n");
+                spin_unlock(&(temp->lock)); //release lock before sleeping
+                schedule(); //go to sleep
             } else {
+                //don't need to sleep
                 spin_unlock(&(temp->lock));
             }
             return 0;
         }
-        
         temp = temp->nextSem;
     }
-//    printk(KERN_WARNING "big oof");
+    //semaphore with given id not found
     return -1;
 }
  /* This syscall implements the up operation on an already opened semaphore using athe semaphore 
@@ -2484,8 +2483,7 @@ asmlinkage long sys_cs1550_down(int id) {
 
 asmlinkage long sys_cs1550_up(int sem_id) {
     struct cs1550_sem *temp = head;
-//    printk(KERN_WARNING "up %d\n", sem_id);
-    while(temp != NULL) {
+    while(temp != NULL) { //cycle through semaphore list
         if(temp->sem_id == sem_id) {
             //IMPLEMENT UP
             spin_lock(&(temp->lock));
@@ -2503,6 +2501,7 @@ asmlinkage long sys_cs1550_up(int sem_id) {
         }
         temp = temp->nextSem;
     }
+    //semaphore with given id not found
     return -1;
 }
 
@@ -2512,21 +2511,20 @@ asmlinkage long sys_cs1550_up(int sem_id) {
  */
 asmlinkage long sys_cs1550_close(int sem_id) {
     struct cs1550_sem *temp = head;
-//    printk(KERN_WARNING "close %d\n", sem_id);
-    if(temp == NULL) {
+    if(temp == NULL) { //if no semaphores instantiated, return error value
         return -1;
     }
 
-    while(temp->nextSem != NULL) {
+    while(temp->nextSem != NULL) { //cycle throught semaphore list
         if(temp->nextSem->sem_id == sem_id) {
             //found semaphore
             struct cs1550_sem *toFree = temp->nextSem;
             temp->nextSem = temp->nextSem->nextSem;
-            //if(toFree has no processes TODO ?
             kfree(toFree);
             return 0;
         }
         temp = temp->nextSem;
     }
+    //semaphore with given id not found
     return -1;
 }
