@@ -2380,17 +2380,18 @@ struct cs1550_sem {
 
 /* Given a node to insert and a head, insert the new node at the end of the linked list*/
 /* return 0 on success */
-int enqueueProcess(struct processNode *processHead, struct processNode *newNode) {
+void enqueueProcess(struct processNode *processHead, struct processNode *newNode) {
+    printk(KERN_WARNING "enqueueing baby\n");
     if(processHead->next == NULL) {
         processHead->next = newNode;
-        return 0;
+        return;
     }
 
     while(processHead->next != NULL) {
         processHead = processHead->next;
     }
     processHead->next = newNode;
-    return 0;
+    return;
 }
 
 /* This syscall creates a new semaphore and stores the provided key to protect 
@@ -2399,6 +2400,7 @@ int enqueueProcess(struct processNode *processHead, struct processNode *newNode)
  * used to down and up the semaphore. */
 asmlinkage long sys_cs1550_create(int myValue, char myKey[32]) {
     struct cs1550_sem *newSem;
+//    printk(KERN_WARNING "creating a semaphore\n");
 
     newSem = (struct cs1550_sem*) kmalloc(sizeof(struct cs1550_sem), GFP_KERNEL);
     newSem->processListHead = NULL;
@@ -2420,6 +2422,7 @@ asmlinkage long sys_cs1550_create(int myValue, char myKey[32]) {
  */
 asmlinkage long sys_cs1550_open(char key[32]) {
     struct cs1550_sem *temp = head;
+//    printk(KERN_WARNING "opening\n");
     while(temp != NULL) {
         if(strcmp(key, temp->key) == 0) {
             //found semaphore
@@ -2435,12 +2438,14 @@ asmlinkage long sys_cs1550_open(char key[32]) {
  * the function returns a 0 when successful or -1 otherwise (e.g. if the semaphore id is invalid
  * or if the queue is full). Please check lecture slides for the pseudocode of the down operation
  */
-asmlinkage long sys_cs1550_down(int sem_id) {
+asmlinkage long sys_cs1550_down(int id) {
     struct cs1550_sem *temp = head;
+//    printk(KERN_WARNING "downing semaphore %d\n", id);
     while(temp != NULL) {
-        if(temp->sem_id == sem_id) {
+        if(temp->sem_id == id) {
+//           printk(KERN_WARNING "found sem to down on\n");
             //found semaphore
-            //TODO: IMPLEMENT DOWN
+            //IMPLEMENT DOWN
             spin_lock(&(temp->lock));
             temp->value -= 1;
             if(temp->value < 0) {
@@ -2451,20 +2456,25 @@ asmlinkage long sys_cs1550_down(int sem_id) {
 
                 //add current process to processList
                 if(temp->processListHead == NULL) {
+//                    printk(KERN_WARNING "adding to head\n");
                     temp->processListHead = newNode;
                 } else {
+//                    printk(KERN_WARNING "adding to end\n");
                     enqueueProcess(temp->processListHead, newNode);
                 }
                 set_current_state(TASK_INTERRUPTIBLE);
-                //spin_unlock(&(temp->lock)); //TODO needed?
+                spin_unlock(&(temp->lock));
                 schedule();
+//                printk(KERN_WARNING "woke from sleep\n");
+            } else {
+                spin_unlock(&(temp->lock));
             }
-            spin_unlock(&(temp->lock));
             return 0;
         }
         
         temp = temp->nextSem;
     }
+//    printk(KERN_WARNING "big oof");
     return -1;
 }
  /* This syscall implements the up operation on an already opened semaphore using athe semaphore 
@@ -2474,18 +2484,18 @@ asmlinkage long sys_cs1550_down(int sem_id) {
 
 asmlinkage long sys_cs1550_up(int sem_id) {
     struct cs1550_sem *temp = head;
+//    printk(KERN_WARNING "up %d\n", sem_id);
     while(temp != NULL) {
         if(temp->sem_id == sem_id) {
             //IMPLEMENT UP
             spin_lock(&(temp->lock));
             temp->value += 1;
             if (temp->value <= 0) {
-                struct task_struct *P = temp->processListHead->process;
-                //TODO is it possible there's no processes waiting?
                 struct processNode *toFree = temp->processListHead;
-                temp->processListHead = temp->processListHead->next; //dequeue process
+                struct task_struct *p = toFree->process;
                 kfree(toFree);
-                wake_up_process(P);
+                wake_up_process(p);
+                temp->processListHead = temp->processListHead->next; //dequeue process
             }
             
             spin_unlock(&(temp->lock));
@@ -2502,6 +2512,7 @@ asmlinkage long sys_cs1550_up(int sem_id) {
  */
 asmlinkage long sys_cs1550_close(int sem_id) {
     struct cs1550_sem *temp = head;
+//    printk(KERN_WARNING "close %d\n", sem_id);
     if(temp == NULL) {
         return -1;
     }
