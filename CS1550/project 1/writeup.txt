@@ -1,0 +1,8 @@
+Create a report to answer the following question:
+Explain the pros and cons of using a FIFO queue (as compared to a priority queue)
+within a semaphore.
+
+Adam Karl
+Project 1 writeup
+
+FIFO Queue vs Priority Queue 
