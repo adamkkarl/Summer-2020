@@ -101,13 +101,13 @@ Write a CSS selector for each description. (The selector is what comes before th
 Question 11
 Write a regular expression for each description of what it should match. (Don't include the / slashes around it.) Feel free to use regexr.com to come up with them.
 
-2. either of the words "food" and "good".   \b(food|good)\b
-3. words that end with "s", "es", or "ies". Not the whole word, just the ending part. \B(s|es|ies)\b
+1. either of the words "food" and "good".   \b(food|good)\b
+2. words that end with "s", "es", or "ies". Not the whole word, just the ending part. \B(s|es|ies)\b
     -in "dogs having parties in boxes", it should find three matches.
     -it should not find these in the middle of words!
         -so it should find the ending on "dogs", but not the s in "base".
-3. prices with a dollar sign and cents, like "$30.00" or "$12345.67". \$\d+\.\d{2}($|\s)
-4. prices with a dollar sign, but the cents are optional, like "$30" and "$30.00" \$\d+(\.\d{2})?($|\s)
+3. prices with a dollar sign and cents, like "$30.00" or "$12345.67". (^|\s)\$\d+\.\d{2}\b
+4. prices with a dollar sign, but the cents are optional, like "$30" and "$30.00" (^|\s)\$\d+(\.\d{2})?\b(?!\.)
     -but not "$30." or "$30.0".
 5. an entire line of 0 or more whitespace characters. \s*\n
 
