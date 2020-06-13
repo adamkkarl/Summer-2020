@@ -140,12 +140,12 @@ Refer to this snippet of HTML:
 
 
 Fill in this JS code to change the contents of the fourth item in the ordered list to "Apples":
-document.getElementsByID('secret') ____.innerHTML = "Apples";
+document.getElementByTagName('secret').lastChild.innerText = "Apples";
 
 Set up a listener for the mouseover event on the element with the ID “secret.” Have it change the color of the text of the thing being moused-over to red.
 
-document._____ (_____).______ ("______",
-function(event) {event._____.____.color = "red"; });
+document.getElementByID("secret").addEventListener ("mouseover",
+function(event) {event.innerHTML.style.color = "red"; });
 
 Question 14
 Here is a small piece of JS that uses an object:
