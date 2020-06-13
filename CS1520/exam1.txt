@@ -55,15 +55,19 @@ console.log(A.y); // 4
 console.log(A.z); // 5
 
 For each of the lines marked 1, 2, 3, 4, 5, say in one sentence what happens when you get or set the properties. Write your answers in a numbered list like this:
-1."it looks inside A and..." etc.
+1. it looks inside A for x and finds a value of 10
+2. it looks inside A for y and finds doesn't find it, so it looks in A's prototype of B and finds value 20
+3. A doesn't have a y variable, so it creates a prototype for A and sets y to 30 in the prototype
+4. it looks inside A for y and finds doesn't find it,so it looks inside A's prototypes and finds it defined twice, so it just says A.z is undefined
+5. it looks inside A for z and finds doesn't find it, so it looks inside A's prototypes and doesn't find z there either so undefined
 
 Question 7
 
 You and your friends use a version control system (like git) for a team programming project. Answer each question with a short sentence in a numbered list. I'm not really looking for specific git commands that you would type in. I want more general answers than that.
-[1] What is the code stored in? (not the name of a website)
-[1] How do we move it around from computer to computer?
-[1] How is this better than copying files directly?
-[2] If I create a bug, I can undo my changes, or "go back in time" to find where I introduced the bug. How is this possible? Like, what does git do that lets me do this?
+[1] What is the code stored in? (not the name of a website) repository
+[1] How do we move it around from computer to computer? using pushes and pulls
+[1] How is this better than copying files directly? multiple people can work on a project simultaneously, then merge their work. Additionally, we can revert to old versions if we realize we messed something up
+[2] If I create a bug, I can undo my changes, or "go back in time" to find where I introduced the bug. How is this possible? Like, what does git do that lets me do this? Git keeps a version history of each commit made.
 
 
 Question 8
@@ -72,6 +76,8 @@ Question 8
 <li id="important">One</li>
 <li>Two</li>
 <li id="important">Three</li>
+1.
+2. Should probably use ordered lists instead to automatically number each element
 
 Question 9
 I tried to make the text on my page get bigger when the browser is at least 1000 pixels wide, but this media query is doing the opposite. What should I change?
@@ -82,24 +88,24 @@ body { font-size: 110%; }
 
 Question 10
 Write a CSS selector for each description. (The selector is what comes before the { curly braces } in the CSS rule.)
-1. all elements with class bigger
-2. <ul>s that are immediate children of a<nav>
-3. links (<a>) that are anywhere in <footer>
-4. all 6 kinds of headings (<h1>, etc.)
-5. links, but only when the user puts their mouse over them
+1. all elements with class bigger:   *.bigger
+2. <ul>s that are immediate children of a<nav>:  nav>ul
+3. links (<a>) that are anywhere in <footer>:  footer a
+4. all 6 kinds of headings (<h1>, etc.):   h1, h2, h3, h4, h5, h6
+5. links, but only when the user puts their mouse over them:  a:hover
 
 Question 11
 Write a regular expression for each description of what it should match. (Don't include the / slashes around it.) Feel free to use regexr.com to come up with them.
 
-2. either of the words "food" and "good".
-3. words that end with "s", "es", or "ies". Not the whole word, just the ending part.
+2. either of the words "food" and "good".   \b(food|good)\b
+3. words that end with "s", "es", or "ies". Not the whole word, just the ending part. \B(s|es|ies)\b
     -in "dogs having parties in boxes", it should find three matches.
     -it should not find these in the middle of words!
         -so it should find the ending on "dogs", but not the s in "base".
-3. prices with a dollar sign and cents, like "$30.00" or "$12345.67".
-4. prices with a dollar sign, but the cents are optional, like "$30" and "$30.00"
+3. prices with a dollar sign and cents, like "$30.00" or "$12345.67". \$\d+\.\d{2}($|\s)
+4. prices with a dollar sign, but the cents are optional, like "$30" and "$30.00" \$\d+(\.\d{2})?($|\s)
     -but not "$30." or "$30.0".
-5. an entire line of 0 or more whitespace characters.
+5. an entire line of 0 or more whitespace characters. \s*$
 
 Question 12
 What is the effect of this code? Say what it does in one short sentence in plain English. (Don't just say what each line does, think like you're explaining it to someone who doesn't know programming.)
@@ -107,6 +113,7 @@ let e = getElementsByTagName('li');
 e.forEach((li) => {
   li.innerHTML += "!"
 });
+Put an exclamation mark after any item in a bulleted or numbered list
 
 
 Question 13
