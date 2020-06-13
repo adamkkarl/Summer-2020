@@ -40,7 +40,7 @@ Java is statically typed, and JS is dynamically typed. Answer the following ques
 [1] when are the types checked in dynamic typing? runtime
 [1] what are the types associated with in static typing? variables
 [1] what are the types associated with in dynamic typing? values
-[2] what advantage does static typing have over dynamic typing? you always know the type of a variable, regardless of what happens to it
+[2] what advantage does static typing have over dynamic typing? you know the type of a certain variable at ANY point, regardless of what happens to it
 
 Question 6
 Here is some JS code. You can copy it and paste it into your browser's inspector console (on a blank tab is best!).
@@ -60,13 +60,12 @@ For each of the lines marked 1, 2, 3, 4, 5, say in one sentence what happens whe
 3. A doesn't have a y variable, so it creates a prototype for A and sets y to 30 in the prototype
 4. it looks inside A for y and finds doesn't find it,so it looks inside A's prototypes and finds it defined twice, so it just says A.z is undefined
 5. it looks inside A for z and finds doesn't find it, so it looks inside A's prototypes and doesn't find z there either so undefined
-
 Question 7
 
 You and your friends use a version control system (like git) for a team programming project. Answer each question with a short sentence in a numbered list. I'm not really looking for specific git commands that you would type in. I want more general answers than that.
 [1] What is the code stored in? (not the name of a website) repository
 [1] How do we move it around from computer to computer? using pushes and pulls
-[1] How is this better than copying files directly? multiple people can work on a project simultaneously, then merge their work. Additionally, we can revert to old versions if we realize we messed something up
+[1] How is this better than copying files directly? multiple people can work on a project simultaneously, then merge their work. Additionally, we can revert to any previous version if we realize we messed something up
 [2] If I create a bug, I can undo my changes, or "go back in time" to find where I introduced the bug. How is this possible? Like, what does git do that lets me do this? Git keeps a version history of each commit made.
 
 
@@ -76,8 +75,7 @@ Question 8
 <li id="important">One</li>
 <li>Two</li>
 <li id="important">Three</li>
-1.
-2. Should probably use ordered lists instead to automatically number each element
+1. an ID can only be used once per page. Here, the "important" ID is used twice2. Should probably use a class instead of an ID. (additionally, should probably use an ordered list to number the bullet points for you)
 
 Question 9
 I tried to make the text on my page get bigger when the browser is at least 1000 pixels wide, but this media query is doing the opposite. What should I change?
@@ -86,10 +84,16 @@ body { font-size: 110%; }
   body { font-size: 200%; }
 }
 
+switch to checking for min-width instead of max-width to increase text size when the boundary of 1000px is exceeded
+body { font-size: 110%; }
+@media screen and (min-width: 1000px) {
+  body { font-size: 200%; }
+}
+
 Question 10
 Write a CSS selector for each description. (The selector is what comes before the { curly braces } in the CSS rule.)
 1. all elements with class bigger:   *.bigger
-2. <ul>s that are immediate children of a<nav>:  nav>ul
+2. <ul>s that are immediate children of a <nav>:  nav>ul
 3. links (<a>) that are anywhere in <footer>:  footer a
 4. all 6 kinds of headings (<h1>, etc.):   h1, h2, h3, h4, h5, h6
 5. links, but only when the user puts their mouse over them:  a:hover
@@ -105,7 +109,7 @@ Write a regular expression for each description of what it should match. (Don't 
 3. prices with a dollar sign and cents, like "$30.00" or "$12345.67". \$\d+\.\d{2}($|\s)
 4. prices with a dollar sign, but the cents are optional, like "$30" and "$30.00" \$\d+(\.\d{2})?($|\s)
     -but not "$30." or "$30.0".
-5. an entire line of 0 or more whitespace characters. \s*$
+5. an entire line of 0 or more whitespace characters. \s*\n
 
 Question 12
 What is the effect of this code? Say what it does in one short sentence in plain English. (Don't just say what each line does, think like you're explaining it to someone who doesn't know programming.)
@@ -113,7 +117,7 @@ let e = getElementsByTagName('li');
 e.forEach((li) => {
   li.innerHTML += "!"
 });
-Put an exclamation mark after any item in a bulleted or numbered list
+Append an exclamation mark after any item in a bulleted or numbered list
 
 
 Question 13
@@ -136,7 +140,7 @@ Refer to this snippet of HTML:
 
 
 Fill in this JS code to change the contents of the fourth item in the ordered list to "Apples":
-document.______ (_____) ____.____ = "Apples";
+document.getElementsByID('secret') ____.innerHTML = "Apples";
 
 Set up a listener for the mouseover event on the element with the ID “secret.” Have it change the color of the text of the thing being moused-over to red.
 
@@ -145,27 +149,33 @@ function(event) {event._____.____.color = "red"; });
 
 Question 14
 Here is a small piece of JS that uses an object:
-
 let c = new Cat("Noodle", 1);
 c.meow();
 c.haveBirthday();
 
 Here is the output it should produce (on the console using console.log):
-
 Noodle says 'meow!'
 Noodle turned 2 today!
 
 Write the constructor function for this object and the methods meow() and haveBirthday().
-
 The object should have two properties, name and age.
-
 meow() shows the message above using the name.
-
 haveBirthday() should increment the object's age and print the message shown above with that new age.
 
+function Cat(name, age) {
+  this.name = name;
+  this.age = age;
+}
+Cat.prototype.meow = function() {
+  console.log("%s says 'meow'", name);
+}
+Cat.prototype.haveBirthday() {
+  this.age += 1;
+  console.log("%s turned %d today!", this.name, this.age);
+}
 
 Question 15
-If I want to store some data on the client's PC, I can use two objects: "window.______ ", which lasts forever, and "window.________ " which lasts until the user closes the tab.
+If I want to store some data on the client's PC, I can use two objects: "window.localStorage ", which lasts forever, and "window.sessionStorage " which lasts until the user closes the tab.
 
 
 Question 16
@@ -173,12 +183,13 @@ Question 16
 From the list below, pick two things which might present difficulties to your users, and for each, give two or three examples of why that might be.
 
 Remember, there are a lot of disabilities, but culture and technology can also be issues!
-
-    -light gray boxes and text on a white background (which is exactly what I'm looking at while making this question, CANVAS)
-    -a video tutorial on how to use your website
-    -two text inputs for entering your full name
-    -complex, fast-moving, colorful animations every time the user navigates to a new page
-    -using <div> and only <div> to give structure to your HTML
+a video tutorial on how to use your website
+-people using screen readers need this information the most but won't get any use out of it (especially if it relies heavily on visuals).
+-deaf people would prefer a text tutorial (also I would prefer text news sites over ones that force you to watch a 5 minute video)
+two text inputs for entering your full name
+-some cultures include several names
+-in some cultures family names come first
+-people change their names
 
 Question 17
 what kinda bear is best?
