@@ -2,30 +2,28 @@
 Question
 Each blank is 1 point.
 
-In CSS, the algorithm that decides which rule “wins” in a conflict is called the **.
-Using ** design ensures that users can view and interact with your page on any device. Small screens only see a ** into the whole page. In your CSS, you should avoid absolute units and prefer ** units, since these will scale with the screen.
-In functional programming, a ** function does not change shared state, so it causes no **. Data which cannot be changed is **.
-A ** is a small piece of data stored on the client's computer which acts as a sort of "ID card."
-If you assign a variable the same value twice, the second assignment won’t have any effect. This is because assigning the same value is **.
-Most of the internet uses a pair of protocols: **, which uniquely identifies computers and directs data to the right places; and **, which ensures successful in-order transfer of data. For high-speed non-critical data (like video), ** is a better choice.
-Compiled languages produce machine code which is executed by the **, whereas interpreted languages produce machine code which is executed by a(n) **. Of these two methods (compiled and interpreted), “scripting” languages are typically **.
+In CSS, the algorithm that decides which rule “wins” in a conflict is called the __cascade__.
+Using __responsive__ design ensures that users can view and interact with your page on any device. Small screens only see a __viewport__ into the whole page. In your CSS, you should avoid absolute units and prefer __relative__ units, since these will scale with the screen.
+In functional programming, a __pure__ function does not change shared state, so it causes no __side effects__. Data which cannot be changed is __immutable__.
+A __ip address__ is a small piece of data stored on the client's computer which acts as a sort of "ID card."
+If you assign a variable the same value twice, the second assignment won’t have any effect. This is because assigning the same value is __idempotence__.
+Most of the internet uses a pair of protocols: __IP__, which uniquely identifies computers and directs data to the right places; and __TCP__, which ensures successful in-order transfer of data. For high-speed non-critical data (like video), __UDP__ is a better choice.
+Compiled languages produce machine code which is executed by the __CPU__, whereas interpreted languages produce machine code which is executed by a(n) __interpreter__. Of these two methods (compiled and interpreted), “scripting” languages are typically __interpreted__.
 
 Question 2
 Match the status code ranges on the left to their meaning on the right.
-100-199
-200-299
-300-399
-400-499
-500-599
+100-199 informational
+200-299 successful
+300-399 redirections
+400-499 client errors
+500-599 server errors
 
 Question 3
-
-
 When your browser wants a webpage, there is a short sequence of events. Describe what data is requested and given, and from whom (which computers). Write your answer like this (keep it short):
-1. ___ is requested from ___.
-2. its response is ___.
-3. ___is requested from ___.
-4. its response is ___.
+1. The domain's IP is requested from a DNS server.
+2. its response is 93.184.216.34.
+3. /index.html is requested from 93.184.216.34.
+4. its response is /index.html.
 
 Question 4
 In stateful protocols, the server keeps track of active connections. Give two examples of problems with this connection model and explain how stateless protocols avoid each problem. Don't forget, some info is in the slide notes...
