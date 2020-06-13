@@ -21,26 +21,26 @@ Match the status code ranges on the left to their meaning on the right.
 Question 3
 When your browser wants a webpage, there is a short sequence of events. Describe what data is requested and given, and from whom (which computers). Write your answer like this (keep it short):
 1. The domain's IP is requested from a DNS server.
-2. its response is 93.184.216.34.
-3. /index.html is requested from 93.184.216.34.
+2. its response is 93.184.216.34. (example.com)
+3. /index.html is requested from 93.184.216.34. (using an HTTP GET request)
 4. its response is /index.html.
 
 Question 4
 In stateful protocols, the server keeps track of active connections. Give two examples of problems with this connection model and explain how stateless protocols avoid each problem. Don't forget, some info is in the slide notes...
-Write your answer like:
-1. problem
-  - how stateless avoids it
-2. problem
-  - how stateless avoids it
+1. What happens if the connection goes down?
+  - When the client gets no response, it doesn't matter whether the connection dropped before or after the initial request was received by the client.
+  Either way, the client can just send the exact same request when the connection is reestablished.
+2. What if someone connects and never disconnects?
+  - Stateless protocols allow the server to just terminate connections at will. Most connections are normally short-lived anyway
 
 
 Question 5
 Java is statically typed, and JS is dynamically typed. Answer the following questions with a short sentence or sentence fragment each. Write your answer in a numbered list to match.
-[1] when are the types checked in static typing?
-[1] when are the types checked in dynamic typing?
-[1] what are the types associated with in static typing?
-[1] what are the types associated with in dynamic typing?
-[2] what advantage does static typing have over dynamic typing?
+[1] when are the types checked in static typing? compile time
+[1] when are the types checked in dynamic typing? runtime
+[1] what are the types associated with in static typing? variables
+[1] what are the types associated with in dynamic typing? values
+[2] what advantage does static typing have over dynamic typing? you always know the type of a variable, regardless of what happens to it
 
 Question 6
 Here is some JS code. You can copy it and paste it into your browser's inspector console (on a blank tab is best!).
