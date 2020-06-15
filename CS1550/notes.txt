@@ -7,7 +7,7 @@ CPU
 
 process - a program that's running
   has memory files, registers, process id (pid)
-  
+
 Process Control Block (PCB)
   (linux: task control block)
   pointer to process memory
@@ -105,7 +105,7 @@ void *runner(void *param) {
   int i = ((int)param);
   printf("%d param = %d\n", (int)tid[i], i);
   sum[i] = 0;
-  for (int j=1; j<=n; j++) 
+  for (int j=1; j<=n; j++)
     sum[i] += j;
   pthread_exit(0);
 }
@@ -377,7 +377,7 @@ class Condition {
 
 Condition::Wait() {
   semCount+=1;
-  if(lock->nextCount > 0) 
+  if(lock->nextCount > 0)
     lock->nextUp(); //wake process from next queue (in monitor)
   else
     lock->next.up(); //if none, wake process waiting FOR monitor
@@ -390,7 +390,7 @@ Condition::Signal() {
     lock
 
 
-Quiz 6/6 
+Quiz 6/6
 The operating system continuously runs on the CPU and is always resident in memory: FALSE
 With modern hardware and out-of-order execution with multipple cores, it's possible to solve Critical Section problems with software alone: FALSE
 Assuming lock is a shared int, starting with lock==0, if 2 processes concurrently execute TestAndSet(lock) they will both get 1 as a return val: FALSE
@@ -423,3 +423,12 @@ Threads are cheaper to create than processes: TRUE
 Consider parent Process P forks child process C. When P terminates, C becomes a zombie: FALSE
 Which is not part of the OS: interrupt service routines, system call implementations, interrupt descriptor table, system call table, INTERRUPT DESCRIPTOR TABLE REGISTER
 
+
+Quiz 6/15
+Every semaphore initialized to 1 is a binary semaphore: FALSE
+Which of the following may occur when a process calls broadcast on a condition variable?  more than one process wake up but only one of them immediately runs; no process wakes up; one process wakes up and immediately runs
+
+A job is in the ready queue if it: has all resources needed to execute except the CPU
+When a process is created using the classical fork() system call, which of the following is not inherited by the child process? process ID
+Consider a system with two or more processes that run concurrently and share some variables. If errors in shared variables may result depending on the exact interleaving of the processes' instructions, the system has: race condition
+(Mark all that apply) Which of the following operations require(s) the executing code to be operating with high privilege (i.e., in kernel mode)? disabling interrupts, setting the system clock
