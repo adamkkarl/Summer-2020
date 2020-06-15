@@ -1,8 +1,16 @@
-Create a report to answer the following question:
-Explain the pros and cons of using a FIFO queue (as compared to a priority queue)
-within a semaphore.
-
 Adam Karl
 Project 1 writeup
 
-FIFO Queue vs Priority Queue 
+FIFO Queue vs Priority Queue in a Semaphore
+
+While using a priority queue has the benefit of allowing high priority processes to
+"skip the line" and jump ahead of high priority processes, one main benefit of using a
+FIFO queue is that it eliminates the possibility of starvation. It's possible that
+with a long queue of waiting processes, one or more low priority processes in a prio queue
+will end up waiting indefinitely (starving) as they keep getting jumped in line faster than
+processes leave the queue. The downside of a FIFO queue is that no matter how important
+a process is, it will always enter the queue in the back of the line. Once instance where
+this could be detrimental is if a high priority writing process ends up waiting on
+several reading processes. It would make a lot more sense to write first so that the
+reading processes have the most up to date information, but such an implementation
+is much more practical with a priority queue.
