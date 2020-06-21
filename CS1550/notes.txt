@@ -389,6 +389,25 @@ Condition::Signal() {
   if(semCount > 0) {
     lock
 
+6/4
+Message Passing - useful for UI thread with other threads sending a message of
+what they want changed
+2 primitives: send and receive
+Issue: how does sender know message got sent?
+
+Barrier
+  -processes wait at barrier until all in group arrive
+  -once all arrive, all can proceed
+  -may be implemented using locks and condition variables
+
+CRITICAL SECTION SOLUTIONS
+  -taking turns (software)
+  -atomic hardware instructions (spinlock)
+  -semaphores (sleeplock)
+  -monitors and condition variables
+  -message passing
+  
+
 
 Quiz 6/6
 The operating system continuously runs on the CPU and is always resident in memory: FALSE
