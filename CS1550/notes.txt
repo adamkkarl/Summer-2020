@@ -414,7 +414,6 @@ Dining Philosophers: need adjacent chopsticks to eat, then release and think
 Sleepy Barber: finite queue, single barber
 
 
-
 Quiz 6/6
 The operating system continuously runs on the CPU and is always resident in memory: FALSE
 With modern hardware and out-of-order execution with multipple cores, it's possible to solve Critical Section problems with software alone: FALSE
@@ -447,6 +446,19 @@ Microkernel operating systems are faster then monolithic systems: FALSE
 Threads are cheaper to create than processes: TRUE
 Consider parent Process P forks child process C. When P terminates, C becomes a zombie: FALSE
 Which is not part of the OS: interrupt service routines, system call implementations, interrupt descriptor table, system call table, INTERRUPT DESCRIPTOR TABLE REGISTER
+
+
+6/9
+Semaphores can represent:
+  Mulit-instance Resource
+    grab resource: down
+    put resource back: up
+  Waiting area (with n "seats")
+    entering waiting area: down 
+    leaving waiting area: up
+  Mutex
+    (when S=0 or S=1 only)
+(rest of class was monitor solutions to classical sync problems)
 
 
 Quiz 6/15
