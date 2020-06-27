@@ -406,7 +406,13 @@ CRITICAL SECTION SOLUTIONS
   -semaphores (sleeplock)
   -monitors and condition variables
   -message passing
-  
+
+Classical Synchronization Problems - see cs1550 page for solutions
+Bounded buffer: circular array queue with producers and consumers
+Readers & Writers: if one process is writing, no others can access shared variable
+Dining Philosophers: need adjacent chopsticks to eat, then release and think
+Sleepy Barber: finite queue, single barber
+
 
 
 Quiz 6/6
