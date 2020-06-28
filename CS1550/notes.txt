@@ -450,15 +450,35 @@ Which is not part of the OS: interrupt service routines, system call implementat
 
 6/9
 Semaphores can represent:
-  Mulit-instance Resource
+  Multi-instance Resource
     grab resource: down
     put resource back: up
   Waiting area (with n "seats")
-    entering waiting area: down 
+    entering waiting area: down
     leaving waiting area: up
   Mutex
     (when S=0 or S=1 only)
 (rest of class was monitor solutions to classical sync problems)
+
+6/11
+Resources
+  preemtable resources: can be taken away with no ill effects
+  nonpreemptable resources: can cause process to fail if taken away
+
+4 conditions for deadlock
+  mutual exclusion: each resource assigned to at most 1 process
+  hold & wait: a process holding resources can request more resources
+  no preemption: cannot forcibly take away resources
+  circular wait: chain of 2+ processes each waiting resource held by next process
+
+The Ostrich Algorithm (pretend there's no deadlock possible)
+  reasonable if: deadlocks rare; cost of prevention high
+  UNIX and windows take this approach
+  trade off between convenience and correctness
+
+Detecting Deadlocks using graphs
+  find cycle in resource allocation graph (means deadlock exists iff 1 of each resource)
+  better detection alg uses 2D array of which processes have which resources
 
 
 Quiz 6/15
