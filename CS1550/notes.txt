@@ -489,3 +489,18 @@ A job is in the ready queue if it: has all resources needed to execute except th
 When a process is created using the classical fork() system call, which of the following is not inherited by the child process? process ID
 Consider a system with two or more processes that run concurrently and share some variables. If errors in shared variables may result depending on the exact interleaving of the processes' instructions, the system has: race condition
 (Mark all that apply) Which of the following operations require(s) the executing code to be operating with high privilege (i.e., in kernel mode)? disabling interrupts, setting the system clock
+
+
+Quiz 6/30
+The waiting time of a process is the finish time - the arrival time: FALSE
+The two decision modes of CPU scheduling algorithms are: preemptive and non-preemptive
+Preemption is done by the kernel: after the quantum expires
+Multi-level queues scheduling with ageing: is a fair scheduling policy
+A CPU scheduler that assigns higher prio to the I/O-bound processes than the CPU-bound processes causes: high CPU util; high I/O util
+A CPU scheduler that assigns higher prio to the CPU-bound processes than the I/O-bound processes causes: high CPU util; low I/O util
+A disk scheduler that assigns higher prio to the I/O-bound processes than the CPU-bound processes causes: (low; high)
+A disk scheduler that assigns higher prio to the I/O-bound processes than the CPU-bound processes causes: (high; high)
+A scheduler that prioritizes I/O-bound processes usually does not significantly delay the completion of CPU-bound processes: TRUE
+Which of the following is true of non-preemptive scheduling: a process keeps the CPU until it terminates or switches to the waiting state
+Which technique is the fastest to track changes in the CPU burst length of a process? exponential averaging with alpha = 0.8
+FCFS scheduling is inherently starvation-free: TRUE
