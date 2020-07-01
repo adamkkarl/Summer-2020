@@ -491,6 +491,41 @@ Consider a system with two or more processes that run concurrently and share som
 (Mark all that apply) Which of the following operations require(s) the executing code to be operating with high privilege (i.e., in kernel mode)? disabling interrupts, setting the system clock
 
 
+6/16
+Recovery from deadlock
+  preemption: take resources forcibly from other processes
+  rollback: checkpoint a process periodically, may reset later
+  kill process: crude but simple, preferrably pick process that hasn't run far
+
+aside: let process holding semaphore run with same prio as highest process
+waiting for that semaphore (Mars rover example)
+
+Banker's Algorithm for preventing deadlocks
+upon resource request, pretend request is granted, then check for deadlock
+must know:
+  resources allocated to each process (2D matrix)
+  maximum of each resource each process would need to finish (2D matrix)
+  total available of each resource
+
+Preventing Deadlock
+Ensure at least 1 of the conditions for deadlock never occurs
+  -mutual exclusion
+  -hold & wait
+  -circular wait
+  -no preemption
+
+mutual exclusion: some devices (like printer) can be *spooled*
+  spooled: separate process queues tasks
+  benefit: as few processes as possible ever hold the resource
+
+hold & wait: ask for all resources before running process
+  downsides: don't always know what you'll need
+  variation: give up all resources before new request
+
+circular wait: assign numbers to resources, always request in numerical order
+  (no way to complete a cycle if implemented properly)
+
+
 Quiz 6/30
 The waiting time of a process is the finish time - the arrival time: FALSE
 The two decision modes of CPU scheduling algorithms are: preemptive and non-preemptive
