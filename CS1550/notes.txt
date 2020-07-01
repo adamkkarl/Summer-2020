@@ -525,6 +525,50 @@ hold & wait: ask for all resources before running process
 circular wait: assign numbers to resources, always request in numerical order
   (no way to complete a cycle if implemented properly)
 
+6/18
+User-oriented criteria
+  Response time: time between submission of request and receipt of request
+  Turnaround time: time from submission to completion
+System-oriented criteria
+  Processor utilization
+  Throughput: number of processors completed per unit time
+  Fairness
+
+Classification
+  Long-term: which process to admit
+  Medium-term: which process to swap in/out
+  Short-term: which ready process to execute next
+
+CPU I/O cycle - CPU burst followed by I/O burst
+
+Scheduling algorithms
+  First-come, first served (FCFS)
+  Shortest Job First (or Shortest Process Next)
+  Priority
+  Round-Robin
+  Multilevel Queue
+  Multilevel Feedback Queue
+
+selection function - determines which ready process is next for execution
+decision mode - specifies the instants in time the selection function is exercised
+  Nonpreemptive - run until it blocks for I/O (or terminates)
+  Preemptive - clock interrupt for context switch
+
+service time = processor time for one CPU-I/O cycle
+  long service time - CPU-bound, or "long jobs"
+Avg wait time = avg turnaround time - avg service time
+
+FCFS
+  non-preemptive, processes run in order they arrive until I/O request
+  favors CPU-bound processes
+  better I/O util would be possible if I/O-bound had higher priority
+  Convoy effect - happens when process with long CPU burst occupies the CPU
+
+Shortest Job First
+  non-preemptive, process with shortest expected CPU burst time runs
+  CPU burst time must be estimated for each process
+  
+
 
 Quiz 6/30
 The waiting time of a process is the finish time - the arrival time: FALSE
