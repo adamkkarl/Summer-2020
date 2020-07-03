@@ -583,3 +583,12 @@ A scheduler that prioritizes I/O-bound processes usually does not significantly 
 Which of the following is true of non-preemptive scheduling: a process keeps the CPU until it terminates or switches to the waiting state
 Which technique is the fastest to track changes in the CPU burst length of a process? exponential averaging with alpha = 0.8
 FCFS scheduling is inherently starvation-free: TRUE
+
+Quiz 7/3
+FCFS favors I/O bound processes, SJF favors CPU-bound: FALSE
+Deadlock detection is a fast operation and is thus adopted by almost all gen-purpose OS's: FALSE
+When using resource ordering, cycles never occur in the resource-allocation graph: TRUE
+Assume 1ms context switch, 100ms timeslice, avg of 1ms process runtime. What's the avg CPU util? less than 50%
+Which of the following is true in a system that detects deadlocks? the OS has to know the max number of resources for each process; deadlocks may occur but will eventually be detected
+Which of the following deadlock conditions is directly prevented by spooling? mutual exclusion
+spurious wakeup
