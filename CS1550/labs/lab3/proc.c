@@ -112,6 +112,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  p->priority = 50; //set default priority to 50
   return p;
 }
 
@@ -323,6 +324,7 @@ void
 scheduler(void)
 {
   struct proc *p;
+  int last_priority = 201;
   struct cpu *c = mycpu();
   c->proc = 0;
   
@@ -330,25 +332,35 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
-    // Loop over process table looking for process to run.
+    // Loop over process table looking for the highest priority in the table
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
+      if(p->priority < last_priority) {
+        last_priority = p->priority;
+      }
+    }
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+    //loop over process table to schedule high prio process
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if(p->state != RUNNABLE)
+        continue;
+      if(p->priority == last_priority) {
+          // Switch to chosen process.  It is the process's job
+          // to release ptable.lock and then reacquire it
+          // before jumping back to us.
+          c->proc = p;
+          switchuvm(p);
+          p->state = RUNNING;
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
+          swtch(&(c->scheduler), p->context);
+          switchkvm();
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+          // Process is done running for now.
+          // It should have changed its p->state before coming back.
+          c->proc = 0;
+      }
     }
     release(&ptable.lock);
 

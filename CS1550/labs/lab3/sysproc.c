@@ -89,3 +89,25 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//manually set the priority of the current process
+int
+sys_setpriority(void)
+{
+  int n;
+  int old;
+
+  if(argint(0, &n) < 0)
+    return -1;
+
+  old = myproc()->priority;
+  if(0 <= n && n <= 200) {
+    myproc()->priority = n;
+    if(n > old) {
+      yield();
+    }
+    return n;
+  } else {
+    return -1;
+  }
+}
