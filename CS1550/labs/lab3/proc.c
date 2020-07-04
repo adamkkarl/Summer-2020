@@ -340,7 +340,7 @@ scheduler(void)
 
       if(p->state != RUNNABLE)
         continue;
-      //chose process with highest prio (that is also RUNNABLE)
+      //choose process with highest prio (that is also RUNNABLE)
       highprio = p;
       for(p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++) {
         if((p1->state == RUNNABLE) && (highprio->priority > p1->priority)) {
@@ -351,22 +351,22 @@ scheduler(void)
       if(highprio != 0) {
         p = highprio;
       }
-    }
 
-    if(p != 0) {
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+      if(p != 0) {
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to us.
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+ 
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
     }
 
     release(&ptable.lock);
