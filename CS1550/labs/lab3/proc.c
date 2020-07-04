@@ -323,8 +323,7 @@ wait(void)
 void
 scheduler(void)
 {
-  struct proc *p;
-  int last_priority = 201;
+  struct proc *p = 0;
   struct cpu *c = mycpu();
   c->proc = 0;
   
@@ -335,35 +334,42 @@ scheduler(void)
     // Loop over process table looking for the highest priority in the table
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      struct proc *highprio = 0;
+      struct proc *p1 = 0;
+
+
       if(p->state != RUNNABLE)
         continue;
-      if(p->priority < last_priority) {
-        last_priority = p->priority;
+      //chose process with highest prio (that is also RUNNABLE)
+      highprio = p;
+      for(p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++) {
+        if((p1->state == RUNNABLE) && (highprio->priority > p1->priority)) {
+          highprio = p1;
+        }
+      }
+      
+      if(highprio != 0) {
+        p = highprio;
       }
     }
 
-    //loop over process table to schedule high prio process
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-      if(p->state != RUNNABLE)
-        continue;
-      if(p->priority == last_priority) {
-          // Switch to chosen process.  It is the process's job
-          // to release ptable.lock and then reacquire it
-          // before jumping back to us.
-          c->proc = p;
-          switchuvm(p);
-          p->state = RUNNING;
+    if(p != 0) {
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
 
-          swtch(&(c->scheduler), p->context);
-          switchkvm();
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
 
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          c->proc = 0;
-      }
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      c->proc = 0;
     }
+
     release(&ptable.lock);
-
   }
 }
 
