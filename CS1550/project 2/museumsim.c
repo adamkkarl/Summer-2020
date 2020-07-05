@@ -1,12 +1,3 @@
-int m = 0;
-int k = 0;
-int pv = 0;
-int dv = 1;
-int sv = 0;
-int pg = 0;
-int dg = 1;
-int sg = 0;
-struct timeval startTime = 0;
 
 //a: visitor process
 Visitor {
@@ -48,6 +39,15 @@ private void tourMuseum() {
 
 
 int main(int argc, const char* argv[]) {
+  int m = 0;
+  int k = 0;
+  int pv = 0;
+  int dv = 1;
+  int sv = 0;
+  int pg = 0;
+  int dg = 1;
+  int sg = 0;
+
   //read inputs
 	int i = 1;
 	while(argc >= i + 2) {
@@ -76,11 +76,65 @@ int main(int argc, const char* argv[]) {
   int *visitorNumber, *guideNumber;
   visitorNumber = (int *) ptr;
   guideNumber = visitorNumber + 1;
-  startTime = visitorNumber + 2;
   //initialize
   *visitorNumber = *guideNumber = 0;
 
   //initialize shared struct timeval startTime just before forking
   gettimeofday(&startTime, NULL);
 
+
+  //TODO do we need to share? I don't think so since it never changes
+  struct timeval startTime = 0;
+
+  pid = fork();
+  if(pid == 0) {
+    //visitor generator process
+
+    //seed random generator for visior arrivals
+    srand(sv);
+
+    for(i = 0; i < m; i++) {
+      pid = fork();
+      if(pid == 0) {
+        //visitor process
+
+        //TODO add logic for child process
+
+        exit();
+      } else {
+        //continue with visitor generation
+
+        int value = rand() %  100 + 1;
+        if(value > pv) { //check if there's a delay before next visitor
+          //delay
+          sleep(dv);
+        }
+      }
+    }
+  } else {
+    //guide generator process
+    
+    //seed random generator for guide arrivals
+    srand(sg);
+
+    //TODO implement logic for tour guide generator and processes
+    for(i = 0; i < k; i++) {
+      pid = fork();
+      if(pid == 0) {
+        //guide process
+
+        //TODO add logic for guide process
+
+        exit();
+      } else {
+        //continue with guide generation
+
+        int value = rand() % 100;
+        if(value > pg) { //check if there's a delay before next guide
+          //delay
+          sleep(dg);
+        }
+      }
+    }
+  }
 }
