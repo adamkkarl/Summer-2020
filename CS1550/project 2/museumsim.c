@@ -71,20 +71,13 @@ int main(int argc, const char* argv[]) {
 		i += 2;
 	}
 
-  //allocate 2 shared ints: visitorNumber, guideNumber
-  void *ptr = mmap(NULL, 2*sizeof(int), PROT_READ|PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
-  int *visitorNumber, *guideNumber;
-  visitorNumber = (int *) ptr;
-  guideNumber = visitorNumber + 1;
-  //initialize
-  *visitorNumber = *guideNumber = 0;
+  int visitorNumber = 0;
+  int guideNumber = 0;
+
 
   //initialize shared struct timeval startTime just before forking
-  gettimeofday(&startTime, NULL);
-
-
-  //TODO do we need to share? I don't think so since it never changes
   struct timeval startTime = 0;
+  gettimeofday(&startTime, NULL);
 
   pid = fork();
   if(pid == 0) {
@@ -97,8 +90,24 @@ int main(int argc, const char* argv[]) {
       pid = fork();
       if(pid == 0) {
         //visitor process
+        int id = visitorNumber++;
 
         //TODO add logic for child process
+        struct timeval currTime = 0;
+        gettimeeofday(&currTime, NULL)
+        fprintf(stderr, "Visitor %d arrives at time %d.", id, currTime - startTime);
+
+        visitorArrives();
+
+        gettimeeofday(&currTime, NULL)
+        fprintf(stderr, "Visitor %d tours the museum at time %d.", id, currTime - startTime);
+
+        tourMuseum();
+        
+        gettimeeofday(&currTime, NULL)
+        fprintf(stderr, "Visitor %d leaves the museum at time %d.", id, currTime - startTime);
+
+        visitorLeaves();
 
         exit();
       } else {
@@ -111,6 +120,8 @@ int main(int argc, const char* argv[]) {
         }
       }
     }
+    wait();
+    exit();
   } else {
     //guide generator process
     
@@ -122,8 +133,24 @@ int main(int argc, const char* argv[]) {
       pid = fork();
       if(pid == 0) {
         //guide process
+        int id = guideNumber++;
 
         //TODO add logic for guide process
+        struct timeval currTime = 0;
+        gettimeeofday(&currTime, NULL)
+        fprintf(stderr, "Tour guide %d arrives at time %d.", id, currTime - startTime);
+        
+        tourguideArrives();
+
+        gettimeeofday(&currTime, NULL)
+        fprintf(stderr, "Tour guide %d opens the museum for tours at time %d.", id, currTime - startTime);
+
+        openMuseum();
+
+        gettimeeofday(&currTime, NULL)
+        fprintf(stderr, "Tour guide %d leaves the museum to time %d.", id, currTime - startTime);
+        
+        tourguideLeaves();
 
         exit();
       } else {
@@ -136,5 +163,7 @@ int main(int argc, const char* argv[]) {
         }
       }
     }
+    wait();
+    exit();
   }
 }
