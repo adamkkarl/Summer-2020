@@ -1,41 +1,36 @@
-
-//a: visitor process
-Visitor {
-	visitorArrives();
-	tourMuseum();
-	visitorLeaves();
-}
-
-//b: tour guide process
-Tourguide {
-	tourguideArrives();
-	openMuseum();
-	tourguideLeaves();
-}
-
 //c1: visitorArrives()
+void visitorArrives() {
+  ;
+}
 
 //c2: tourMuseum()
 //1 tour guide and at most 10 visitors
-private void tourMuseum() {
+void tourMuseum() {
 	sleep(2);
 }
 
 //c3: visitorLeaves()
+void visitorLeaves() {
+  ;
+}
 
 //c4: tourguideArrives()
 //at most 2 tour guides in museum at a time
+void tourguideArrives() {
+  ;
+}
 
 //c5: openMuseum()
 //tour guide cannot open museum without a visitor
+void openMuseum() {
+  ;
+}
 
 //c6: tourguideLeaves()
 //leaves when no more visitors are in the museum
-
-//d: process simulating tour guides' arrival
-
-
-//e: process simulating visitor's arrival
+void tourguideLeaves() {
+  ;
+}
 
 
 int main(int argc, const char* argv[]) {
@@ -94,17 +89,17 @@ int main(int argc, const char* argv[]) {
 
         //TODO add logic for child process
         struct timeval currTime = 0;
-        gettimeeofday(&currTime, NULL)
+        gettimeeofday(&currTime, NULL);
         fprintf(stderr, "Visitor %d arrives at time %d.", id, currTime - startTime);
 
         visitorArrives();
 
-        gettimeeofday(&currTime, NULL)
+        gettimeeofday(&currTime, NULL);
         fprintf(stderr, "Visitor %d tours the museum at time %d.", id, currTime - startTime);
 
         tourMuseum();
         
-        gettimeeofday(&currTime, NULL)
+        gettimeeofday(&currTime, NULL);
         fprintf(stderr, "Visitor %d leaves the museum at time %d.", id, currTime - startTime);
 
         visitorLeaves();
@@ -137,17 +132,17 @@ int main(int argc, const char* argv[]) {
 
         //TODO add logic for guide process
         struct timeval currTime = 0;
-        gettimeeofday(&currTime, NULL)
+        gettimeeofday(&currTime, NULL);
         fprintf(stderr, "Tour guide %d arrives at time %d.", id, currTime - startTime);
         
         tourguideArrives();
 
-        gettimeeofday(&currTime, NULL)
+        gettimeeofday(&currTime, NULL);
         fprintf(stderr, "Tour guide %d opens the museum for tours at time %d.", id, currTime - startTime);
 
         openMuseum();
 
-        gettimeeofday(&currTime, NULL)
+        gettimeeofday(&currTime, NULL);
         fprintf(stderr, "Tour guide %d leaves the museum to time %d.", id, currTime - startTime);
         
         tourguideLeaves();
