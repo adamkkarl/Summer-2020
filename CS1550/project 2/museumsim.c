@@ -5,12 +5,11 @@
 #include <linux/unistd.h>
 #include <stdio.h>
 #include <sys/resource.h>
-#include "condvar.c"
 #include "condvar.h"
 
 
 //integers shared across processes
-int *visitorsInMuseum, *guidesInMuseum, *visitorsOutside;
+int *visitorsInMuseum, *guidesInMuseum, *visitorsOutside, *visitorOpenings;
 
 //locks shared across processes
 struct cs1550_lock *lock;
@@ -23,24 +22,23 @@ struct cs1550_condition *visitorGO, *guideGO, *guideEXIT;
 //arrive and wait (if necessary) until the number of visitors inside is < 10x the number of guides inside
 void visitorArrives() {
   cs1550_acquire(lock);
-  if(*visitorsInMuseum < 10 * *guidesInMuseum) {
+  if(*visitorOpenings > 0) {
     *visitorsInMuseum += 1;
+    *visitorOpenings -= 1;
     //space is available inside, go right in
     cs1550_release(lock);
     return;
   }
 
   *visitorsOutside += 1;
-  while(*visitorsInMuseum == 10 * *guidesInMuseum) { //cases to wait: 0v0g, 10v1g, 20v2g
-//    fprintf(stderr, "%dv %dg %dw\n", *visitorsInMuseum, *guidesInMuseum, *visitorsOutside);
+  while(*visitorOpenings < 1) { //cases to wait: 0v0g, 10v1g, 20v2g
     if(*guidesInMuseum < 2) {
-//      fprintf(stderr, "signaling guide\n");
       cs1550_signal(guideGO);
     }
-//    fprintf(stderr, "visitor sleep\n");
     cs1550_wait(visitorGO);
   }
   *visitorsOutside -= 1;
+  *visitorOpenings -= 1;
 
   //free to go inside
   *visitorsInMuseum += 1;
@@ -62,7 +60,7 @@ void visitorLeaves() {
   cs1550_acquire(lock);
   *visitorsInMuseum -= 1; //decrement num visitors inside
   cs1550_signal(visitorGO);
-  if(*visitorsInMuseum == 0) { //signal guide(s) to leave if no visitors left
+  if(*visitorsInMuseum == 0 || (*visitorOpenings + *visitorsInMuseum == 10 && *guidesInMuseum == 2)) { //signal guide(s) to leave if no visitors left
     cs1550_signal(guideEXIT);
   }
   cs1550_release(lock);
@@ -75,11 +73,10 @@ void visitorLeaves() {
 void tourguideArrives() {
   cs1550_acquire(lock);
   while(*visitorsOutside == 0 || *guidesInMuseum > 1) {
-//    fprintf(stderr, "guide sleeping\n");
     cs1550_wait(guideGO);
   }
   *guidesInMuseum += 1;
-//  fprintf(stderr, "%d in\n", *guidesInMuseum);
+  *visitorOpenings += 10;
   cs1550_release(lock);
   return;
 }
@@ -88,7 +85,6 @@ void tourguideArrives() {
 //simply increment the number of guides in the museum and signal any waiting visitors
 void openMuseum() {
   cs1550_acquire(lock);
-//  fprintf(stderr, "signalling visitor\n");
   cs1550_signal(visitorGO);
   cs1550_release(lock);
 }
@@ -97,10 +93,11 @@ void openMuseum() {
 //wait until no more visitors are in the museum, then leave
 void tourguideLeaves() {
   cs1550_acquire(lock);
-  do {
-    cs1550_wait(guideEXIT);
-  } while(*visitorsInMuseum > 0);
+  cs1550_wait(guideEXIT); //in some kind of while loop? TODO
   *guidesInMuseum -= 1;
+  if(*guidesInMuseum == 0) {
+    *visitorOpenings = 0;
+  }
   cs1550_release(lock);
 }
 
@@ -141,11 +138,12 @@ int main(int argc, const char* argv[]) {
 //  fprintf(stderr, "%d visitors, %d guides\n", m, k);
 
   //initialize shared ints
-  void *ptr = mmap(NULL, 3*sizeof(int), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
+  void *ptr = mmap(NULL, 4*sizeof(int), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
   visitorsInMuseum = (int*) ptr;
   guidesInMuseum = visitorsInMuseum + 1;
   visitorsOutside = visitorsInMuseum + 2;
-  *visitorsInMuseum = *guidesInMuseum = *visitorsOutside = 0;
+  visitorOpenings = visitorsInMuseum + 3;
+  *visitorsInMuseum = *guidesInMuseum = *visitorsOutside = *visitorOpenings = 0;
   
 
   //initialize the locks for the 2 shared ints
@@ -162,10 +160,10 @@ int main(int argc, const char* argv[]) {
   cs1550_init_condition(guideGO, lock, "guideGO");
   cs1550_init_condition(guideEXIT, lock, "guideEXIT");
 
-  int j;
 
   //initialize shared struct timeval startTime just before forking
   struct timeval startTime, currTime;
+  long int timeDiff;
   gettimeofday(&startTime, NULL);
 
   int pid = fork();
@@ -174,23 +172,27 @@ int main(int argc, const char* argv[]) {
 
     //seed random generator for visior arrivals
     srand(sv);
+
     int id;
     for(id = 0; id < m; id += 1) {
       pid = fork();
       if(pid == 0) {
         //visitor process
         gettimeofday(&currTime, NULL);
-        fprintf(stderr, "Visitor %d arrives at time %d.\n", id, currTime.tv_sec - startTime.tv_sec);
+        timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
+        fprintf(stderr, "Visitor %d arrives at time %d.\n", id, timeDiff);
 
         visitorArrives();
 
         gettimeofday(&currTime, NULL);
-        fprintf(stderr, "Visitor %d tours the museum at time %d.\n", id, currTime.tv_sec - startTime.tv_sec);
+        timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
+        fprintf(stderr, "Visitor %d tours the museum at time %d.\n", id, timeDiff);
 
         tourMuseum();
 
         gettimeofday(&currTime, NULL);
-        fprintf(stderr, "Visitor %d leaves the museum at time %d.\n", id, currTime.tv_sec - startTime.tv_sec);
+        timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
+        fprintf(stderr, "Visitor %d leaves the museum at time %d.\n", id, timeDiff);
         
         visitorLeaves();
 
@@ -220,19 +222,22 @@ int main(int argc, const char* argv[]) {
         //guide process
 
         gettimeofday(&currTime, NULL);
-        fprintf(stderr, "Tour guide %d arrives at time %d.\n", id, currTime.tv_sec - startTime.tv_sec);
+        timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
+        fprintf(stderr, "Tour guide %d arrives at time %d.\n", id, timeDiff);
         
         tourguideArrives();
 
         gettimeofday(&currTime, NULL);
-        fprintf(stderr, "Tour guide %d opens the museum for tours at time %d.\n", id, currTime.tv_sec - startTime.tv_sec);
+        timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
+        fprintf(stderr, "Tour guide %d opens the museum for tours at time %d.\n", id, timeDiff);
 
         openMuseum();
 
         tourguideLeaves();
 
         gettimeofday(&currTime, NULL);
-        fprintf(stderr, "Tour guide %d leaves the museum at time %d.\n", id, currTime.tv_sec - startTime.tv_sec);
+        timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
+        fprintf(stderr, "Tour guide %d leaves the museum at time %d.\n", id, timeDiff);
 
         cs1550_acquire(lock);
         if(*guidesInMuseum == 0) {
