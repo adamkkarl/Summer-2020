@@ -114,30 +114,27 @@ int main(int argc, const char* argv[]) {
   int sg = 12345;
 
   //read inputs
-  int opt;
-  while((opt = getopt(argc, argv, "mkpvdvsvpgdgsg:"))) {
-    switch(opt) {
-      case "m":
-        m = atoi(optarg);
-      case "k":
-        k = atoi(optarg);
-      case "pv":
-        pv = atoi(optarg);
-      case "dv":
-        dv = atoi(optarg);
-      case "sv":
-        sv = atoi(optarg);
-      case "pg":
-        pg = atoi(optarg);
-      case "dg":
-        dg = atoi(optarg);
-      case "sg":
-        sg = atoi(optarg);
-      default:
-        fprintf(stderr, "bad input %s", optarg);
+  int i = 1;
+  while(i + 1 < argc) {
+    if(strcmp(argv[i], "-m")) {
+      m = atoi(argv[i+1]);
+    } else if(strcmp(argv[i], "-k")) {
+      k = atoi(argv[i+1]);
+    } else if(strcmp(argv[i], "-pv")) {
+      pv = atoi(argv[i+1]);
+    } else if(strcmp(argv[i], "-dv")) {
+      dv = atoi(argv[i+1]);
+    } else if(strcmp(argv[i], "-sv")) {
+      sv = atoi(argv[i+1]);
+    } else if(strcmp(argv[i], "-pg")) {
+      pg = atoi(argv[i+1]);
+    } else if(strcmp(argv[i], "-dg")) {
+      dg = atoi(argv[i+1]);
+    } else if(strcmp(argv[i], "-sg")) {
+      sg = atoi(argv[i+1]);
     }
+    i += 2;
   }
-
 
   fprintf(stderr, "%d visitors, %d guides", m, k);
 
