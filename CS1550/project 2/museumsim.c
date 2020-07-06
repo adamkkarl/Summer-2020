@@ -1,6 +1,13 @@
 #include <sys/mman.h>
-#include <condvar.c>
-#include <condvar.h>
+#include <sys/time.h>
+#include <time.h>
+#include <stdlib.h>
+#include <linux/unistd.h>
+#include <stdio.h>
+#include <sys/resource.h>
+#include "condvar.c"
+#include "condvar.h"
+
 
 //integers shared across processes
 int *visitorsInMuseum;
@@ -24,7 +31,7 @@ void visitorArrives() {
   }
 
   while(*visitorsInMuseum >= 10 * *guidesInMuseum) {
-    if(guidesInMuseum < 2) {
+    if(*guidesInMuseum < 2) {
       cs1550_signal(guideGO);
     }
     cs1550_wait(visitorGO);
@@ -66,7 +73,7 @@ void tourguideArrives() {
   do {
     //should always go to sleep until signalled by visitor waiting outside
     cs1550_wait(guideGO);
-  } while(guidesInside >= 2);
+  } while(*guidesInMuseum >= 2);
   *guidesInMuseum++;
   cs1550_signal(visitorGO);
   cs1550_release(lock);
@@ -89,6 +96,9 @@ void tourguideLeaves() {
     cs1550_wait(guideEXIT);
   } while(*visitorsInMuseum > 0);
   *guidesInMuseum--;
+  if(*guidesInMuseum == 0) {
+    fprintf(stderr, "The museum is now empty.");
+  }
   cs1550_release(lock);
 }
 
@@ -96,36 +106,40 @@ void tourguideLeaves() {
 int main(int argc, const char* argv[]) {
   int m = 0;
   int k = 0;
-  int pv = 0;
-  int dv = 1;
-  int sv = 0;
-  int pg = 0;
-  int dg = 1;
-  int sg = 0;
-
+  int pv = 80;
+  int dv = 2;
+  int sv = 9999;
+  int pg = 10;
+  int dg = 5;
+  int sg = 12345;
 
   //read inputs
-	int i = 1;
-	while(argc >= i + 2) {
-		if(argv[i] == "-m") {
-			m = atoi(argv[i+1]);
-		} else if(argv[i] == "-k") {
-			k = atoi(argv[i+1]);
-		} else if(argv[i] == "-pv") {
-			pv = atoi(argv[i+1]);
-		} else if(argv[i] == "-dv") {
-			dv = atoi(argv[i+1]);
-		} else if(argv[i] == "-sv") {
-			sv = atoi(argv[i+1]);
-		} else if(argv[i] == "-pg") {
-			pg = atoi(argv[i+1]);
-		} else if(argv[i] == "-dg") {
-			dg = atoi(argv[i+1]);
-		} else if(argv[i] == "-sg") {
-			sg = atoi(argv[i+1]);
-		}
-		i += 2;
-	}
+  int opt;
+  while((opt = getopt(argc, argv, "mkpvdvsvpgdgsg:"))) {
+    switch(opt) {
+      case "m":
+        m = atoi(optarg);
+      case "k":
+        k = atoi(optarg);
+      case "pv":
+        pv = atoi(optarg);
+      case "dv":
+        dv = atoi(optarg);
+      case "sv":
+        sv = atoi(optarg);
+      case "pg":
+        pg = atoi(optarg);
+      case "dg":
+        dg = atoi(optarg);
+      case "sg":
+        sg = atoi(optarg);
+      default:
+        fprintf(stderr, "bad input %s", optarg);
+    }
+  }
+
+
+  fprintf(stderr, "%d visitors, %d guides", m, k);
 
   //ids for each visitor and guide (don't need to be locked)
   int visitorNumber = 0;
@@ -139,12 +153,12 @@ int main(int argc, const char* argv[]) {
   
 
   //initialize the locks for the 2 shared ints
-  void *ptr = mmap(NULL, sizeof(struct cs1550_lock), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
+  ptr = mmap(NULL, sizeof(struct cs1550_lock), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
   lock = (struct cs1550_lock *) ptr;
   cs1550_init_lock(lock, "lock");
 
   //initialize 3 shared condition variables
-  void *ptr = mmap(NULL, 3*sizeof(struct cs1550_condition), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
+  ptr = mmap(NULL, 3*sizeof(struct cs1550_condition), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
   visitorGO = (struct cs1550_condition *) ptr;
   guideGO = visitorGO + 1;
   guideEXIT = visitorGO + 2;
@@ -152,49 +166,46 @@ int main(int argc, const char* argv[]) {
   cs1550_init_condition(guideGO, lock, "guideGO");
   cs1550_init_condition(guideEXIT, lock, "guideEXIT");
 
-
+  int j;
 
   //initialize shared struct timeval startTime just before forking
-  struct timeval startTime = 0;
+  struct timeval startTime, currTime;
   gettimeofday(&startTime, NULL);
 
-  pid = fork();
+  int pid = fork();
   if(pid == 0) {
     //visitor generator process
 
     //seed random generator for visior arrivals
     srand(sv);
-
-    for(i = 0; i < m; i++) {
+    for(j = 0; j < m; j++) {
       pid = fork();
       if(pid == 0) {
         //visitor process
         int id = visitorNumber++;
 
-        //TODO add logic for child process
-        struct timeval currTime = 0;
-        gettimeeofday(&currTime, NULL);
-        fprintf(stderr, "Visitor %d arrives at time %d.", id, currTime - startTime);
+        gettimeofday(&currTime, NULL);
+        fprintf(stderr, "Visitor %d arrives at time %d.", id, startTime.tv_sec - currTime.tv_sec);
 
         visitorArrives();
 
-        gettimeeofday(&currTime, NULL);
-        fprintf(stderr, "Visitor %d tours the museum at time %d.", id, currTime - startTime);
+        gettimeofday(&currTime, NULL);
+        fprintf(stderr, "Visitor %d tours the museum at time %d.", id, startTime.tv_sec - currTime.tv_sec);
 
         tourMuseum();
         
         visitorLeaves();
         
-        gettimeeofday(&currTime, NULL);
-        fprintf(stderr, "Visitor %d leaves the museum at time %d.", id, currTime - startTime);
+        gettimeofday(&currTime, NULL);
+        fprintf(stderr, "Visitor %d leaves the museum at time %d.", id, startTime.tv_sec - currTime.tv_sec);
 
 
-        exit();
+        return;
       } else {
         //continue with visitor generation
 
-        int value = rand() %  100 + 1;
-        if(value > pv) { //check if there's a delay before next visitor
+        int value = rand() %  100;
+        if(value >= pv) { //check if there's a delay before next visitor
           //delay
           sleep(dv);
         }
@@ -207,36 +218,33 @@ int main(int argc, const char* argv[]) {
     //seed random generator for guide arrivals
     srand(sg);
 
-    //TODO implement logic for tour guide generator and processes
-    for(i = 0; i < k; i++) {
+    for(j = 0; j < k; j++) {
       pid = fork();
       if(pid == 0) {
         //guide process
         int id = guideNumber++;
 
-        //TODO add logic for guide process
-        struct timeval currTime = 0;
-        gettimeeofday(&currTime, NULL);
-        fprintf(stderr, "Tour guide %d arrives at time %d.", id, currTime - startTime);
+        gettimeofday(&currTime, NULL);
+        fprintf(stderr, "Tour guide %d arrives at time %d.", id, startTime.tv_sec - currTime.tv_sec);
         
         tourguideArrives();
 
-        gettimeeofday(&currTime, NULL);
-        fprintf(stderr, "Tour guide %d opens the museum for tours at time %d.", id, currTime - startTime);
+        gettimeofday(&currTime, NULL);
+        fprintf(stderr, "Tour guide %d opens the museum for tours at time %d.", id, startTime.tv_sec - currTime.tv_sec);
 
         openMuseum();
 
         tourguideLeaves();
 
-        gettimeeofday(&currTime, NULL);
-        fprintf(stderr, "Tour guide %d leaves the museum to time %d.", id, currTime - startTime);
+        gettimeofday(&currTime, NULL);
+        fprintf(stderr, "Tour guide %d leaves the museum at time %d.", id, startTime.tv_sec - currTime.tv_sec);
         
-        exit();
+        return;
       } else {
         //continue with guide generation
 
         int value = rand() % 100;
-        if(value > pg) { //check if there's a delay before next guide
+        if(value >= pg) { //check if there's a delay before next guide
           //delay
           sleep(dg);
         }
@@ -244,11 +252,13 @@ int main(int argc, const char* argv[]) {
     }
     wait();
   }
+ 
   //close condition vars
-  cs1550_close_condition(visitorGO, lock, "visitorGO");
-  cs1550_close_condition(guideGO, lock, "guideGO");
-  cs1550_close_condition(guideEXIT, lock, "guideEXIT");
+  cs1550_close_condition(visitorGO);
+  cs1550_close_condition(guideGO);
+  cs1550_close_condition(guideEXIT);
 
   //close lock
   cs1550_close_lock(lock);
+  return;
 }
