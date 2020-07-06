@@ -93,7 +93,9 @@ void openMuseum() {
 //wait until no more visitors are in the museum, then leave
 void tourguideLeaves() {
   cs1550_acquire(lock);
-  cs1550_wait(guideEXIT); //in some kind of while loop? TODO
+  do {
+    cs1550_wait(guideEXIT); 
+  } while ((*guidesInMuseum - 1) * 10 < *visitorsInMuseum); //TODO added
   *guidesInMuseum -= 1;
   if(*guidesInMuseum == 0) {
     *visitorOpenings = 0;
@@ -180,19 +182,19 @@ int main(int argc, const char* argv[]) {
         //visitor process
         gettimeofday(&currTime, NULL);
         timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
-        fprintf(stderr, "Visitor %d arrives at time %d.\n", id, timeDiff);
+        fprintf(stderr, "Visitor %d arrives at time %ld.\n", id, timeDiff);
 
         visitorArrives();
 
         gettimeofday(&currTime, NULL);
         timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
-        fprintf(stderr, "Visitor %d tours the museum at time %d.\n", id, timeDiff);
+        fprintf(stderr, "Visitor %d tours the museum at time %ld.\n", id, timeDiff);
 
         tourMuseum();
 
         gettimeofday(&currTime, NULL);
         timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
-        fprintf(stderr, "Visitor %d leaves the museum at time %d.\n", id, timeDiff);
+        fprintf(stderr, "Visitor %d leaves the museum at time %ld.\n", id, timeDiff);
         
         visitorLeaves();
 
@@ -223,13 +225,13 @@ int main(int argc, const char* argv[]) {
 
         gettimeofday(&currTime, NULL);
         timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
-        fprintf(stderr, "Tour guide %d arrives at time %d.\n", id, timeDiff);
+        fprintf(stderr, "Tour guide %d arrives at time %ld.\n", id, timeDiff);
         
         tourguideArrives();
 
         gettimeofday(&currTime, NULL);
         timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
-        fprintf(stderr, "Tour guide %d opens the museum for tours at time %d.\n", id, timeDiff);
+        fprintf(stderr, "Tour guide %d opens the museum for tours at time %ld.\n", id, timeDiff);
 
         openMuseum();
 
@@ -237,7 +239,7 @@ int main(int argc, const char* argv[]) {
 
         gettimeofday(&currTime, NULL);
         timeDiff = (long int)(currTime.tv_sec - startTime.tv_sec);
-        fprintf(stderr, "Tour guide %d leaves the museum at time %d.\n", id, timeDiff);
+        fprintf(stderr, "Tour guide %d leaves the museum at time %ld.\n", id, timeDiff);
 
         cs1550_acquire(lock);
         if(*guidesInMuseum == 0) {
