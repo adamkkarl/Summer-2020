@@ -1,10 +1,6 @@
 #include <sys/mman.h>
 #include <sys/time.h>
-#include <time.h>
-#include <stdlib.h>
-#include <linux/unistd.h>
 #include <stdio.h>
-#include <sys/resource.h>
 #include "condvar.h"
 
 //Adam Karl
@@ -142,27 +138,28 @@ int main(int argc, const char* argv[]) {
     i += 2;
   }
 
-  //initialize shared ints
-  void *ptr = mmap(NULL, 4*sizeof(int), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
+  //allocate memory for all shared cariables
+  void *ptr = mmap(NULL, 4*sizeof(int) + sizeof(struct cs1550_lock) + 3*sizeof(struct cs1550_condition), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
+
+  //shared ints
   visitorsInMuseum = (int*) ptr;
   guidesInMuseum = visitorsInMuseum + 1;
   visitorsOutside = visitorsInMuseum + 2;
   visitorOpenings = visitorsInMuseum + 3;
   *visitorsInMuseum = *guidesInMuseum = *visitorsOutside = *visitorOpenings = 0;
-  
-  //initialize the lock
-  ptr = mmap(NULL, sizeof(struct cs1550_lock), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
-  lock = (struct cs1550_lock *) ptr;
+
+  //shared lock
+  lock = (struct cs1550_lock *) (visitorsInMuseum + 4);
   cs1550_init_lock(lock, "lock");
 
-  //initialize 3 shared condition variables
-  ptr = mmap(NULL, 3*sizeof(struct cs1550_condition), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0,0);
-  visitorGO = (struct cs1550_condition *) ptr;
+  //shared condition vars
+  visitorGO = (struct cs1550_condition *) (lock + 1);
   guideGO = visitorGO + 1;
   guideEXIT = visitorGO + 2;
   cs1550_init_condition(visitorGO, lock, "visitorGO");
   cs1550_init_condition(guideGO, lock, "guideGO");
   cs1550_init_condition(guideEXIT, lock, "guideEXIT");
+
 
   //initialize shared struct timeval startTime just before forking
   struct timeval startTime, currTime;
