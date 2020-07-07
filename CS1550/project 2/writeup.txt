@@ -2,9 +2,10 @@ Adam Karl
 7/6/2020
 
 
-The tour guide will always enter the museum before his first visitor, and leave after his last visitor (either his 10th visitor or when the visitor leaving means there's no more visitors inside).
+The tour guide will always wait until at least 1 visitor is waiting outside, the enter just before that visitor, and leave after his last visitor (either his 10th visitor or when the visitor leaving means there's no more visitors inside).
+The tour guide waits on the guideGO cv to enter the museum, and guideEXIT to leave.
 
-A visitor will enter if and only if there's 1 or more "spots" available in the museum. Since each guide adds 10 spots, no extra visitors can enter (11 visitors, 1 guide will never finish)
+A visitor will enter if and only if there's 1 or more "spots" available in the museum. Since each guide adds precisely 10 spots, no extra visitors can enter past the tenth (11 visitors, 1 guide will never finish)
+The visitor waits on visitorGO to enter the museum, then leaves as soon as it finishes touring.
 
-The only problem is that for some reason, sometimes it seems like the first few test arrival messages get "cut off" when the autograder runs. It only happens very rarely, but it seems to just completely skip a few lines, causing me to fail the test. This never happens running on qemu. I'm not sure why this is the case because if you go through my code there is no way for it to enter the museum without first running the arrival print statement.
-It seems to be a race condition I just cannot find, but the ONLY effect is that it doesn't print the arrival statement (it still enters and leaves the museum just fine)
+I had a lot of issues with a memory error causing some statements not to properly print, which resulted in me refactoring the code several times, using several shared variables to ensure the robustness of the code. I actually solved the problem by condensing to only 1 call of mmap, but the side effect of trying to fix the bug was that several redundancies are in place to prevent deadlocking (such as checking multiple times that conditions are ready for a guide to enter the museum)
