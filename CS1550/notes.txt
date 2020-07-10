@@ -602,6 +602,34 @@ best choice depends on:
   system workload
   hardware support for dispatcher
   relative importance of criteria (responce time, CPU util, throughput)
+
+6/25
+Memory Management
+  Basic memory management
+  swapping
+  virtual memory
+  page replacement algorithms
+  modeling page replacement algorithms
+  design issues for paging systems
+  implementation issues
+  segmentation
+Ideal world: memory is large, fast, non-volatile (stays w/ power off)
+  in reality: choose 2
+Goal: make real world look as much like the ideal world as possible
+
+Memory Hierarchy
+  Levels of memory: small and fast to large and slow
+  registers, L1 cache, L2 chache, L3 cache, RAM, SSD, Magnetic HD, tape drives
+cache: small, fast, expensive
+  L1 (level 1) cache: on CPU chip
+  L2&L3 cache: off-chip, made of SRAM
+Main Memory (DRAM)
+Disk: many gigs, slow, cheap, nonvolatile
+
+Process PCB has
+  base register: start of process's memory partition
+  limit register: size of memory partition
+
   
 
 
