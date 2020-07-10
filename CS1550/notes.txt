@@ -567,6 +567,41 @@ FCFS
 Shortest Job First
   non-preemptive, process with shortest expected CPU burst time runs
   CPU burst time must be estimated for each process
+
+6/23
+Shortest Job First Critique
+  possibility of starving long processes
+  preemption is mandatory for time-sharing environment
+  gives implicit priority to short jobs
+
+SJF optimizes avg turnaround time EXCEPT when processes may arrive at any time
+
+Priorities Scheduling - explicit user assigned priorities
+  multiple ready queues for each prio level
+  low prio = possible starvation
+  dynamic priorities = can increase based on age or execution history
+
+Round-Robin: for high responsiveness, bad turnaround
+  selection: FCFS
+  decision mode: preemptive
+  processor runs until time-slice "quantum" expires (usually 10-100ms)
+Time quantum
+  must be longer than clock interrupt + dispatching overhead
+  should be longer than typical interaction (CPU burst)
+
+Multilevel Feedback Scheduling
+  preemptive scheduling with dynamic properties
+  each priority has queue with its own scheduling algorithm
+  new process starts in RQ0, moves down after each quantum w/o I/O call
+    I/O-bound stay high prio, CPU-bound drift down
+  often 1 priority lower = double quantum length
+  long jobs may starve
+
+Algorithm comparison
+best choice depends on:
+  system workload
+  hardware support for dispatcher
+  relative importance of criteria (responce time, CPU util, throughput)
   
 
 
