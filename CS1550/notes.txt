@@ -630,9 +630,6 @@ Process PCB has
   base register: start of process's memory partition
   limit register: size of memory partition
 
-  
-
-
 Quiz 6/30
 The waiting time of a process is the finish time - the arrival time: FALSE
 The two decision modes of CPU scheduling algorithms are: preemptive and non-preemptive
@@ -655,3 +652,40 @@ Assume 1ms context switch, 100ms timeslice, avg of 1ms process runtime. What's t
 Which of the following is true in a system that detects deadlocks? the OS has to know the max number of resources for each process; deadlocks may occur but will eventually be detected
 Which of the following deadlock conditions is directly prevented by spooling? mutual exclusion
 spurious wakeup
+
+7/7
+CPU -> MMU -> Physical Memory
+
+Swapping 
+Memory allocation changes as:
+  processes come into memory
+  processes leave memory
+    swapped to disk
+    complete execution
+
+Leave programs room to grow
+  allocate more memory for data
+  larger stack
+Handled by allocating more than necessary at start
+  Inefficient: possible wasted memory
+    can allocate parts at a time
+      non-contiguous physical memory
+      just base & limit registers no longer enough
+        need both registers for each segment
+      now, can ~swap~ some parts (e.g. heap) in and out of memory to make room
+        virtual memory: RAM + swap space on disk
+Pages: 4kb in x86, different sizes in Intel
+Paging - certain size
+  logical page -> physical page
+  indirection: use page table to keep track of translation
+Page Table Entry
+|protection|D|R|V|page frame number|
+D: dirty bit (if modified)
+R: referenced bit (if read)
+V: valid bit (if in memory) (if 0, rest of PTE is invalid)
+page frame number: base addredd (phys)
+
+Page replacement algorithm
+  page fault: page not found in memory
+    is an interrupt
+
