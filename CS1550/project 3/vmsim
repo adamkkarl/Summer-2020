@@ -4,20 +4,26 @@ import getopt, sys
 
 __author__ = "Adam Karl"
 
-def PTE():
-  def write():
+class PTE:
+  def write(self):
     """simulate page write"""
     self.dirty = True
 
-  def getaddr():
+  def getAddr(self):
     return self.addr
 
-  def getDirtyBit():
+  def getDirtyBit(self):
     return self.dirty
 
   def __init__(self, addr):
     self.addr = addr
     self.dirty = False
+
+def calculateBaseAddr(addr, size):
+  """given an address and page size, calculate the starting address of the page it's in"""
+  offset = addr % size #offset from the beginning of the page
+  return addr - size
+
 
 def opt(numFrames, pageSize, f):
   """simulate optimal page replacement algorithm"""
@@ -43,9 +49,40 @@ def lru(numFrames, pageSize, file):
   faults = 0
   writes = 0
 
+  memory = list()
+  
+
   with open(file) as f:
     for line in f:
-      pass
+      l = line.strip().split()
+      op = l[0]
+      addr = int(l[1], 0)
+
+      baseAddr = calculateBaseAddr(addr, pageSize)
+      found = False
+      p = None
+      for i in range(len(memory)):
+        page = memory[i]
+        if(page.getAddr() == baseAddr):
+          found = True
+          p = memory.pop(i) #put accessed page at end of queue
+          break
+
+      if(not found): #not in memory = page fault
+        faults += 1
+        p = PTE(baseAddr)
+        if(len(memory) >= numFrames): #no room in memory; need to evict one
+          old = memory.pop(0) 
+          if(old.getDirtyBit):  #is eviction clean or dirty?
+            writes += 1
+          
+      if (op == "l"):
+        accesses += 1
+      elif (op == "s"):
+        writes += 1
+        p.write() #sets dirty bit to 1
+      memory.append(p)  #put at end of queue
+
   f.close()
 
   print("Algorithm: LRU")
@@ -54,7 +91,6 @@ def lru(numFrames, pageSize, file):
   print("Total memory accesses: %d" % accesses)
   print("Total page faults: %d" % faults)
   print("Total memory accesses: %d" % writes)
-
 
 
 def main():
