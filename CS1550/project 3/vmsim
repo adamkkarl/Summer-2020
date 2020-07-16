@@ -21,27 +21,14 @@ class PTE:
 
 def calculateBaseAddr(addr, size):
   """given an address and page size, calculate the starting address of the page it's in"""
-  offset = addr % size #offset from the beginning of the page
-  return addr - size
+  s = size * 1000 #since size is given in KB
+  offset = addr % s #offset from the beginning of the page
+  return addr - offset
 
 
 def opt(numFrames, pageSize, f):
   """simulate optimal page replacement algorithm"""
-  accesses = 0
-  faults = 0
-  writes = 0
-
-  with open(file) as f:
-    for line in f:
-      pass
-  f.close()
-
-  print("Algorithm: LRU")
-  print("Number of frames: %d" % numFrames)
-  print("Page size: %d KB" % pageSize)
-  print("Total memory accesses: %d" % accesses)
-  print("Total page faults: %d" % faults)
-  print("Total memory accesses: %d" % writes)
+  pass
 
 def lru(numFrames, pageSize, file):
   """simulate least recently used page replacement algorithm"""
@@ -79,7 +66,6 @@ def lru(numFrames, pageSize, file):
       if (op == "l"):
         accesses += 1
       elif (op == "s"):
-        writes += 1
         p.write() #sets dirty bit to 1
       memory.append(p)  #put at end of queue
 
@@ -90,7 +76,7 @@ def lru(numFrames, pageSize, file):
   print("Page size: %d KB" % pageSize)
   print("Total memory accesses: %d" % accesses)
   print("Total page faults: %d" % faults)
-  print("Total memory accesses: %d" % writes)
+  print("Total writes to disk: %d" % writes)
 
 
 def main():
