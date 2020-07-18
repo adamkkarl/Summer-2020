@@ -65,7 +65,7 @@ def optAlg(numFrames, pageSize, file):
     else:
       hashmap[currPageNum] = i
 
-  print(parsedFile)
+#  print(parsedFile)
   #simulate memory with optimal page replacement
   memory = list()
   for i in range(len(parsedFile)):
@@ -89,8 +89,9 @@ def optAlg(numFrames, pageSize, file):
             if(longest == -1):  #if an entry is never used again, we found the one to replace
               break
         for evictIndex in range(len(memory)): #find first entry that matches 
-          if (memory[evictIndex].getNextIndex == longest):
+          if (memory[evictIndex].getNextIndex() == longest):
             evicted = memory.pop(evictIndex)
+            #print("Evicted: %d" % evicted.getPageNum())
             if(evicted.getDirtyBit() == True):  #is eviction clean or dirty?
               writes += 1
             break
@@ -103,6 +104,11 @@ def optAlg(numFrames, pageSize, file):
     else:
       print("bad op: %s" % op)
     memory.append(p)
+
+  #after program runs, write pagees in memory to disk
+#  for page in memory:
+#    if (page.getDirtyBit()):
+#      writes += 1
 
   print("Algorithm: OPT")
   print("Number of frames: %d" % numFrames)
