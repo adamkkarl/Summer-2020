@@ -5,71 +5,154 @@ import getopt, sys
 __author__ = "Adam Karl"
 
 class PTE:
+  """holds the data that a page table entry would hold"""
+
   def write(self):
     """simulate page write"""
     self.dirty = True
 
-  def getAddr(self):
-    return self.addr
+  def getPageNum(self):
+    return self.pageNum
 
   def getDirtyBit(self):
     return self.dirty
 
-  def __init__(self, addr):
-    self.addr = addr
+  def getNextIndex(self):
+    """Return the index of the next time this page is accessed (OPT alg only)"""
+    #note: -1 if not used again
+    return self.nextIndex
+
+  def setNextIndex(self, index):
+    self.nextIndex = index
+
+  def __init__(self, num):
+    self.pageNum = num
     self.dirty = False
 
-def calculateBaseAddr(addr, size):
+def calculatePageNum(addr, size):
   """given an address and page size, calculate the starting address of the page it's in"""
+  """ex: with a 4KB page size, page 0 has addresses 0-3999, page 1 has addresses 4000-7999"""
+  a = int(addr, 0) #convert address hex string to decimal address
   s = size * 1000 #since size is given in KB
-  offset = addr % s #offset from the beginning of the page
-  return addr - offset
+  return a // s
 
 
-def opt(numFrames, pageSize, f):
+def optAlg(numFrames, pageSize, file):
   """simulate optimal page replacement algorithm"""
-  pass
-
-def lru(numFrames, pageSize, file):
-  """simulate least recently used page replacement algorithm"""
+  parsedFile = list() #op, pageNum, nextCall (when is the NEXT time this page num is used again)
   accesses = 0
   faults = 0
   writes = 0
 
+  #read the file
+  with open(file) as f:
+    for line in f:
+      parsedLine = list()
+      op, addr = line.strip().split()
+      parsedLine.append(op)
+      parsedLine.append(calculatePageNum(addr, pageSize))
+      parsedLine.append(-1)
+      parsedFile.append(parsedLine)
+  f.close()
+
+  #calculate and store the next time at which each page num is accessed again
+  hashmap = dict()
+  for i in range(len(parsedFile)):
+    currPageNum = parsedFile[i][1]
+    if currPageNum in hashmap:
+      parsedFile[hashmap[currPageNum]][2] = i #update previous call to this page with current index
+      hashmap[currPageNum] = i                #now need to update current line's next call
+    else:
+      hashmap[currPageNum] = i
+
+  print(parsedFile)
+  #simulate memory with optimal page replacement
   memory = list()
-  
+  for i in range(len(parsedFile)):
+    op, pageNum, nextIndex = parsedFile[i]
+    p = None
+    for j in range(len(memory)): #check for page hit
+      if(memory[j].getPageNum() == pageNum):
+        #page hit
+        p = memory.pop(j) #put accessed page at end of queue (since just accessed)
+        break
+    if (p == None): #not in memory = page fault
+      faults += 1
+      p = PTE(pageNum)
+      p.setNextIndex(nextIndex)
+      if(len(memory) == numFrames): #no room in memory; need to evict one
+        longest = -2
+        #determine which entry in PTE to evict by finding which one will not be reaccessed for the longest time
+        for entry in memory:
+          if (entry.getNextIndex() > longest or entry.getNextIndex() == -1):
+            longest = entry.getNextIndex()
+            if(longest == -1):  #if an entry is never used again, we found the one to replace
+              break
+        for evictIndex in range(len(memory)): #find first entry that matches 
+          if (memory[evictIndex].getNextIndex == longest):
+            evicted = memory.pop(evictIndex)
+            if(evicted.getDirtyBit() == True):  #is eviction clean or dirty?
+              writes += 1
+            break
+
+    accesses += 1
+    if (op == "l"):
+      pass
+    elif (op == "s"):
+      p.write() #sets dirty bit to 1
+    else:
+      print("bad op: %s" % op)
+    memory.append(p)
+
+  print("Algorithm: OPT")
+  print("Number of frames: %d" % numFrames)
+  print("Page size: %d KB" % pageSize)
+  print("Total memory accesses: %d" % accesses)
+  print("Total page faults: %d" % faults)
+  print("Total writes to disk: %d" % writes)
+
+def lruAlg(numFrames, pageSize, file):
+  """simulate least recently used page replacement algorithm"""
+  memory = list()
+  accesses = 0
+  faults = 0
+  writes = 0
 
   with open(file) as f:
     for line in f:
-      l = line.strip().split()
-      op = l[0]
-      addr = int(l[1], 0)
+      op, addr = line.strip().split()
 
-      baseAddr = calculateBaseAddr(addr, pageSize)
-      found = False
+      pageNum = calculatePageNum(addr, pageSize)
       p = None
-      for i in range(len(memory)):
-        page = memory[i]
-        if(page.getAddr() == baseAddr):
-          found = True
-          p = memory.pop(i) #put accessed page at end of queue
+      for i in range(len(memory)): #check for page hit
+        if(memory[i].getPageNum() == pageNum):
+          #page hit
+          p = memory.pop(i) #put accessed page at end of queue (since just accessed)
           break
 
-      if(not found): #not in memory = page fault
+      if(p == None): #not in memory = page fault
         faults += 1
-        p = PTE(baseAddr)
-        if(len(memory) >= numFrames): #no room in memory; need to evict one
+        p = PTE(pageNum)
+        if(len(memory) == numFrames): #no room in memory; need to evict one
           old = memory.pop(0) 
-          if(old.getDirtyBit):  #is eviction clean or dirty?
+          if(old.getDirtyBit() == True):  #is eviction clean or dirty?
             writes += 1
           
+      accesses += 1
       if (op == "l"):
-        accesses += 1
+        pass
       elif (op == "s"):
         p.write() #sets dirty bit to 1
+      else:
+        print("bad op: %s" % op)
       memory.append(p)  #put at end of queue
 
   f.close()
+
+  #after program runs, write pagees in memory to disk
+#  for page in memory:
+#    if (page.getDirtyBit()):
+#      writes += 1
 
   print("Algorithm: LRU")
   print("Number of frames: %d" % numFrames)
@@ -90,6 +173,7 @@ def main():
   except:
     print("bad arguments")
 
+  #parse -n, -p, and -a options
   for opt, arg in opts:
     if opt in ['-n']:
       numFrames = int(arg)
@@ -100,9 +184,9 @@ def main():
   file = args[0]
 
   if (alg == "opt"):
-    opt(numFrames, pageSize, file)
+    optAlg(numFrames, pageSize, file)
   elif (alg == "lru"):
-    lru(numFrames, pageSize, file)
+    lruAlg(numFrames, pageSize, file)
   else:
     print("input 'opt' or 'lru' as the algorithm type")
 
