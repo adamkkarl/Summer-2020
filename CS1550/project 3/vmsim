@@ -23,6 +23,7 @@ class PTE:
     return self.nextIndex
 
   def setNextIndex(self, index):
+    """set the index of the next time this page is accessed (OPT alg only)"""
     self.nextIndex = index
 
   def __init__(self, num):
@@ -39,12 +40,12 @@ def calculatePageNum(addr, size):
 
 def optAlg(numFrames, pageSize, file):
   """simulate optimal page replacement algorithm"""
-  parsedFile = list() #op, pageNum, nextCall (when is the NEXT time this page num is used again)
   accesses = 0
   faults = 0
   writes = 0
 
   #read the file
+  parsedFile = list() #op, pageNum, nextCall (when is the NEXT time this page num is used again)
   with open(file) as f:
     for line in f:
       parsedLine = list()
@@ -65,21 +66,22 @@ def optAlg(numFrames, pageSize, file):
     else:
       hashmap[currPageNum] = i
 
-#  print(parsedFile)
   #simulate memory with optimal page replacement
   memory = list()
-  for i in range(len(parsedFile)):
-    op, pageNum, nextIndex = parsedFile[i]
+  for parsedLine in parsedFile:
+    op, pageNum, nextIndex = parsedLine
     p = None
-    for j in range(len(memory)): #check for page hit
-      if(memory[j].getPageNum() == pageNum):
+    for i in range(len(memory)): #check for page hit
+      if(memory[i].getPageNum() == pageNum):
         #page hit
-        p = memory.pop(j) #put accessed page at end of queue (since just accessed)
+        p = memory.pop(i) #put accessed page at end of queue (since just accessed)
         break
     if (p == None): #not in memory = page fault
       faults += 1
       p = PTE(pageNum)
       p.setNextIndex(nextIndex)
+      if (op == "s"):
+        p.write() #sets dirty bit to 1
       if(len(memory) == numFrames): #no room in memory; need to evict one
         longest = -2
         #determine which entry in PTE to evict by finding which one will not be reaccessed for the longest time
@@ -97,12 +99,6 @@ def optAlg(numFrames, pageSize, file):
             break
 
     accesses += 1
-    if (op == "l"):
-      pass
-    elif (op == "s"):
-      p.write() #sets dirty bit to 1
-    else:
-      print("bad op: %s" % op)
     memory.append(p)
 
   #after program runs, write pagees in memory to disk
@@ -167,7 +163,6 @@ def lruAlg(numFrames, pageSize, file):
   print("Total page faults: %d" % faults)
   print("Total writes to disk: %d" % writes)
 
-
 def main():
   numFrames = None
   pageSize = None
@@ -195,7 +190,6 @@ def main():
     lruAlg(numFrames, pageSize, file)
   else:
     print("input 'opt' or 'lru' as the algorithm type")
-
 
 if __name__ == "__main__":
   main()
