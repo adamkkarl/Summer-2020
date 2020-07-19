@@ -34,26 +34,20 @@ def calculatePageNum(addr, size):
   """given an address and page size, calculate the starting address of the page it's in"""
   """ex: with a 4KB page size, page 0 has addresses 0-3999, page 1 has addresses 4000-7999"""
   a = int(addr, 0) #convert address hex string to decimal address
-  s = size * 1000 #since size is given in KB
+  s = size * pow(2,10)
   return a // s
 
 
 def optAlg(numFrames, pageSize, file):
   """simulate optimal page replacement algorithm"""
-  accesses = 0
-  faults = 0
-  writes = 0
+  accesses = faults = writes = 0
 
   #read the file
   parsedFile = list() #op, pageNum, nextCall (when is the NEXT time this page num is used again)
   with open(file) as f:
     for line in f:
-      parsedLine = list()
       op, addr = line.strip().split()
-      parsedLine.append(op)
-      parsedLine.append(calculatePageNum(addr, pageSize))
-      parsedLine.append(-1)
-      parsedFile.append(parsedLine)
+      parsedFile.append([op, calculatePageNum(addr, pageSize), -1])
   f.close()
 
   #calculate and store the next time at which each page num is accessed again
@@ -62,7 +56,7 @@ def optAlg(numFrames, pageSize, file):
     currPageNum = parsedFile[i][1]
     if currPageNum in hashmap:
       parsedFile[hashmap[currPageNum]][2] = i #update previous call to this page with current index
-      hashmap[currPageNum] = i                #now need to update current line's next call
+      hashmap[currPageNum] = i                #prepare to update current line's next call
     else:
       hashmap[currPageNum] = i
 
@@ -76,7 +70,7 @@ def optAlg(numFrames, pageSize, file):
         #page hit
         p = memory.pop(i) #put accessed page at end of queue (since just accessed)
         break
-    if (p == None): #not in memory = page fault
+    else: #not in memory = page fault
       faults += 1
       p = PTE(pageNum)
       p.setNextIndex(nextIndex)
@@ -86,25 +80,21 @@ def optAlg(numFrames, pageSize, file):
         longest = -2
         #determine which entry in PTE to evict by finding which one will not be reaccessed for the longest time
         for entry in memory:
-          if (entry.getNextIndex() > longest or entry.getNextIndex() == -1):
-            longest = entry.getNextIndex()
-            if(longest == -1):  #if an entry is never used again, we found the one to replace
-              break
+          test = entry.getNextIndex()
+          if (test == -1): #entry is never used again; this is the one to replace
+            longest = test
+            break
+          elif (longest < test):
+            longest = test
         for evictIndex in range(len(memory)): #find first entry that matches 
           if (memory[evictIndex].getNextIndex() == longest):
             evicted = memory.pop(evictIndex)
-            #print("Evicted: %d" % evicted.getPageNum())
             if(evicted.getDirtyBit() == True):  #is eviction clean or dirty?
               writes += 1
             break
 
     accesses += 1
     memory.append(p)
-
-  #after program runs, write pagees in memory to disk
-#  for page in memory:
-#    if (page.getDirtyBit()):
-#      writes += 1
 
   print("Algorithm: OPT")
   print("Number of frames: %d" % numFrames)
@@ -116,9 +106,7 @@ def optAlg(numFrames, pageSize, file):
 def lruAlg(numFrames, pageSize, file):
   """simulate least recently used page replacement algorithm"""
   memory = list()
-  accesses = 0
-  faults = 0
-  writes = 0
+  accesses = faults = writes = 0
 
   with open(file) as f:
     for line in f:
@@ -148,13 +136,7 @@ def lruAlg(numFrames, pageSize, file):
       else:
         print("bad op: %s" % op)
       memory.append(p)  #put at end of queue
-
   f.close()
-
-  #after program runs, write pagees in memory to disk
-#  for page in memory:
-#    if (page.getDirtyBit()):
-#      writes += 1
 
   print("Algorithm: LRU")
   print("Number of frames: %d" % numFrames)
