@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import getopt, sys
+import getopt, sys, math
 
 __author__ = "Adam Karl"
 
@@ -29,13 +29,18 @@ class PTE:
   def __init__(self, num):
     self.pageNum = num
     self.dirty = False
+    self.nextIndex = -1
 
 def calculatePageNum(addr, size):
   """given an address and page size, calculate the starting address of the page it's in"""
   """ex: with a 4KB page size, page 0 has addresses 0-3999, page 1 has addresses 4000-7999"""
   a = int(addr, 0) #convert address hex string to decimal address
-  s = size * pow(2,10)
-  return a // s
+  #s = size * pow(2,10) #since page sizes are given in KiB
+  a = a >> 10
+  while(size > 1):
+    size = size >> 1
+    a = a >> 1
+  return a
 
 
 def optAlg(numFrames, pageSize, file):
@@ -70,6 +75,7 @@ def optAlg(numFrames, pageSize, file):
       if(memory[i].getPageNum() == pageNum):
         #page hit
         p = memory.pop(i) #put accessed page at end of queue (since just accessed)
+        p.setNextIndex(nextCall)
         break
 
     if(p == None): #not in memory = page fault
@@ -82,7 +88,7 @@ def optAlg(numFrames, pageSize, file):
         longestIndex = -1
         for i in range(len(memory)):
           if (memory[i].getNextIndex() == -1):
-            longest - -1
+            longest = -1
             longestIndex = i
             break
           elif (memory[i].getNextIndex() > longest):
@@ -100,7 +106,6 @@ def optAlg(numFrames, pageSize, file):
     else:
       print("bad op: %s" % op)
     memory.append(p)  #put at end of queue
-
 
   print("Algorithm: OPT")
   print("Number of frames: %d" % numFrames)
