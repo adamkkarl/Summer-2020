@@ -54,47 +54,53 @@ def optAlg(numFrames, pageSize, file):
   hashmap = dict()
   for i in range(len(parsedFile)):
     currPageNum = parsedFile[i][1]
-    if currPageNum in hashmap:
+    if (currPageNum in hashmap):
       parsedFile[hashmap[currPageNum]][2] = i #update previous call to this page with current index
       hashmap[currPageNum] = i                #prepare to update current line's next call
     else:
-      hashmap[currPageNum] = i
+      hashmap[currPageNum] = i                #next time this page is found, update current line
 
-  #simulate memory with optimal page replacement
+  #simulate optimal page replacement algorithm
   memory = list()
   for parsedLine in parsedFile:
-    op, pageNum, nextIndex = parsedLine
+    op, pageNum, nextCall = parsedLine
+
     p = None
     for i in range(len(memory)): #check for page hit
       if(memory[i].getPageNum() == pageNum):
         #page hit
         p = memory.pop(i) #put accessed page at end of queue (since just accessed)
         break
-    else: #not in memory = page fault
+
+    if(p == None): #not in memory = page fault
       faults += 1
       p = PTE(pageNum)
-      p.setNextIndex(nextIndex)
-      if (op == "s"):
-        p.write() #sets dirty bit to 1
+      p.setNextIndex(nextCall)
       if(len(memory) == numFrames): #no room in memory; need to evict one
+        #determine which entry in memory to evict
         longest = -2
-        #determine which entry in PTE to evict by finding which one will not be reaccessed for the longest time
-        for entry in memory:
-          test = entry.getNextIndex()
-          if (test == -1): #entry is never used again; this is the one to replace
-            longest = test
+        longestIndex = -1
+        for i in range(len(memory)):
+          if (memory[i].getNextIndex() == -1):
+            longest - -1
+            longestIndex = i
             break
-          elif (longest < test):
-            longest = test
-        for evictIndex in range(len(memory)): #find first entry that matches 
-          if (memory[evictIndex].getNextIndex() == longest):
-            evicted = memory.pop(evictIndex)
-            if(evicted.getDirtyBit() == True):  #is eviction clean or dirty?
-              writes += 1
-            break
-
+          elif (memory[i].getNextIndex() > longest):
+            longest = memory[i].getNextIndex()
+            longestIndex = i
+        old = memory.pop(longestIndex)
+        if (old.getDirtyBit() == True):
+          writes += 1
+        
     accesses += 1
-    memory.append(p)
+    if (op == "l"):
+      pass
+    elif (op == "s"):
+      p.write() #sets dirty bit to 1
+    else:
+      print("bad op: %s" % op)
+    memory.append(p)  #put at end of queue
+
 
   print("Algorithm: OPT")
   print("Number of frames: %d" % numFrames)
