@@ -96,6 +96,8 @@ typedef struct cs1550_disk_block cs1550_disk_block;
  *
  * man -s 2 stat will show the fields of a stat structure
  */
+// Return 0 on success, with correctly set structure
+// Return -ENOENT if file not found
 static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
 	int res = 0;
@@ -135,6 +137,8 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
  * Called whenever the contents of a directory are desired. Could be from an 'ls'
  * or could even be when a user hits TAB to do autocompletion
  */
+// Return 0 on success
+// Return -ENOENT if dir is not valid or not found
 static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi)
 {
@@ -145,6 +149,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	(void) fi;
 
 	//This line assumes we have no subdirectories, need to change
+  //TODO use strncpy() and strncmp()
 	if (strcmp(path, "/") != 0)
 	return -ENOENT;
 
@@ -152,6 +157,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	//read the fuse.h file for a description (in the ../include dir)
 	filler(buf, ".", NULL, 0);
 	filler(buf, "..", NULL, 0);
+  //filler(buf, hello_path + 1, NULL, 0); from hello.c
 
 	/*
 	//add the user stuff (subdirs or files)
@@ -165,6 +171,10 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
  * Creates a directory. We can ignore mode since we're not dealing with
  * permissions, as long as getattr returns appropriate ones for us.
  */
+// Return 0 on success
+// Return -ENAMETOOLONG if name > 8 chars
+// Return -EPERM if directory isn't under root dir only
+// Return -EEXIST if directory already exists
 static int cs1550_mkdir(const char *path, mode_t mode)
 {
 	(void) path;
@@ -176,6 +186,7 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 /*
  * Removes a directory.
  */
+// DO NOT MODIFY
 static int cs1550_rmdir(const char *path)
 {
 	(void) path;
@@ -186,6 +197,10 @@ static int cs1550_rmdir(const char *path)
  * Does the actual creation of a file. Mode and dev can be ignored.
  *
  */
+// Return 0 on success
+// Return -ENAMETOOLONG if name beyond 8 chars ?
+// Return -EPERM if file is trying to be created in root dir
+// Return -EEXIXT if file already exists
 static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 {
 	(void) mode;
@@ -197,6 +212,7 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 /*
  * Deletes a file
  */
+// DO NOT MODIFY
 static int cs1550_unlink(const char *path)
 {
     (void) path;
@@ -243,6 +259,7 @@ static int cs1550_write(const char *path, const char *buf, size_t size,
  * the appropriate directory entry.
  *
  */
+// DO NOT MODIFY
 static int cs1550_truncate(const char *path, off_t size)
 {
 	(void) path;
@@ -256,6 +273,7 @@ static int cs1550_truncate(const char *path, off_t size)
  * Called when we open a file
  *
  */
+// DO NOT MODIFY
 static int cs1550_open(const char *path, struct fuse_file_info *fi)
 {
 	(void) path;
@@ -282,6 +300,7 @@ static int cs1550_open(const char *path, struct fuse_file_info *fi)
  * again. For us, return success simply to avoid the unimplemented error
  * in the debug log.
  */
+// DO NOT MODIFY
 static int cs1550_flush (const char *path , struct fuse_file_info *fi)
 {
 	(void) path;
