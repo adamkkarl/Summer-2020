@@ -13,6 +13,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdlib.h>
 
 //size of a disk block
 #define	BLOCK_SIZE 512
@@ -109,10 +110,13 @@ static void * cs1550_init(struct fuse_conn_info* fi)
 {
 	  (void) fi;
     printf("We're all gonna live from here ....\n");
-    cs1550_root_directory root;
-    root.lastAllocatedBlock = 0;
-    root.nDirectories = 0;
-    write_root(&root);
+    cs1550_root_directory *root = (cs1550_root_directory *) malloc(sizeof(cs1550_root_directory));
+    root->lastAllocatedBlock = (long) 0;
+    root->nDirectories = 0;
+		printf("gonna write root\n");
+    write_root(root);
+		free(root);
+		printf("finish init");
 		return NULL;
 }
 
@@ -137,7 +141,7 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
 
 	memset(stbuf, 0, sizeof(struct stat));
 
-	//is path the root dir?
+	//is path the root dir ?
 	if (strcmp(path, "/") == 0) {
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = 2;
@@ -438,9 +442,11 @@ long useNextFreeBlock() {
 
 //write/overwrite root block
 void write_root(cs1550_root_directory *root) {
+	printf("write started\n");
   FILE *disk = fopen(".disk", "r+b");
   fwrite(root, BLOCK_SIZE, 1, disk);
   fclose(disk);
+	printf("write ended\n");
 }
 
 //write/overwrite directory entry into given block number
