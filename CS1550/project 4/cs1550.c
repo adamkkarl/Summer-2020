@@ -99,6 +99,7 @@ void write_root(cs1550_root_directory *root);
 void write_directory_entry(cs1550_directory_entry *dir, long blockNum);
 void write_index_block(cs1550_index_block *index, long blockNum);
 long check_subdir(char *directory);
+long check_file(char *directory, char *filename, char *extension);
 
 /* Thanks to Mohammad Hasanzadeh Mofrad (@moh18) for these
    two functions */
@@ -367,6 +368,14 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset,
 
 	size = 0;
 
+	char directory[MAX_FILENAME + 1];
+	char filename[MAX_FILENAME + 1];
+	char extension[MAX_EXTENSION + 1];
+	get_path(path, directory, filename, extension);
+
+	long file_index = check_file(directory, filename, extension);
+
+
 	return size;
 }
 
@@ -453,6 +462,28 @@ long check_subdir(char *directory) {
     if (strncmp(directory, testDir) == 0) { //check name against directory name in root
       free(root);
       return root->directories[i].nStartBlock; //return start block
+    }
+  }
+  return -1;
+}
+
+// if file exists, return its start block. otherwise return -1
+long check_file(char *directory, char *filename, char *extension) {
+  cs1550_root_directory *root = open_root();
+	int i;
+  for (i=0; i < root->nDirectories; i++) {
+    testDir = root->directories[i].dname;
+    if (strncmp(directory, testDir) == 0) { //check name against directory name in root
+      long dirStartBlock = root->directories[i].nStartBlock; //return start block
+			cs1550_directory_entry dir = open_dir(dirStartBlock);
+
+			int j;
+			for (j=0; j < dir->nFiles; j++) {
+					if (strcmp(dir->files[j]->fname, filename) == 0 && strcmp(dir->files[j]->fext, extension) == 0) {
+						//match filename and extension!
+						return dir->files[j]->nIndexBlock;
+					}
+			}
     }
   }
   return -1;
