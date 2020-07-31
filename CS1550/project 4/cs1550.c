@@ -100,6 +100,7 @@ long useNextFreeBlock();
 void write_root(cs1550_root_directory *root);
 void write_directory_entry(cs1550_directory_entry *dir, long blockNum);
 void write_index_block(cs1550_index_block *index, long blockNum);
+void write_disk_block(cs1550_disk_block *disk_block, long blockNum)
 long check_subdir(char *directory);
 long check_file(char *directory, char *filename, char *extension);
 
@@ -424,12 +425,91 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset,
  */
 static int cs1550_write(const char *path, const char *buf, size_t size,
 			  off_t offset, struct fuse_file_info *fi)
+				struct fuse_file_info *fi)
 {
 	(void) buf;
 	(void) offset;
 	(void) fi;
 	(void) path;
 
+	size = 0;
+
+	char directory[MAX_FILENAME + 1];
+	char filename[MAX_FILENAME + 1];
+	char extension[MAX_EXTENSION + 1];
+	get_path(path, directory, filename, extension);
+
+	long dir_index = check_subdir(directory);
+	cs1550_directory_entry dir = open_dir(dir_index);
+	long file_index = check_file(directory, filename, extension);
+	cs1550_index_block index_block = open_file(file_index);
+	long currBlock = offset / BLOCK_SIZE; //which disk block do we start in
+
+	int currPos = offset % BLOCK_SIZE;
+	int bytesLeftInFirstBlock = BLOCK_SIZE - currPos
+
+	int blocksToWrite;
+	int testSize = size;
+	testSize -= bytesLeftInFirstBlock;
+	blocksToWrite++;
+	while (testSize > 0) {
+		testSize -= BLOCK_SIZE;
+		blocksToWrite++;
+	}
+
+	int bytesToWrite = bytesLeftInFirstBlock;
+	if (size < bytesLeftInFirstBlock) {
+		bytesToWrite = size;
+	}
+
+	//at this point, blocksToWrite has the number of disk blocks we have to modify
+	int i;
+	for(i=0; i<blocksToWrite; i++) {
+		cs1550_disk_block disk_block;
+
+		long entry_index = indexBlock->entries[currBlock];
+		if (entry_index != NULL) { //block already found in mem
+			disk_block = open_disk_block(indexBlock->entries[currBlock]);
+			int j;
+			while (bytesToWrite > 0) {
+				disk_block->data[currPos++] = buf[buf_write_index++];
+				bytesToWrite--;
+				size--;
+			}
+		} else { //block not found, need to add one
+			long new_block_index;
+			new_block_index = useNextFreeBlock();
+
+			while (bytesToWrite > 0) {
+				disk_block->data[currPos++] = buf[buf_write_index++];
+				bytesToWrite--;
+				size--;
+			}
+
+			//write new data block to disk
+			write_disk_block(&disk_block, new_block_index);
+
+			//update index block
+			index_block->entries[dir->files[currBlock]->fsize / BLOCK_SIZE] = new_block_index;
+
+			//update directory entry
+			dir->files[currBlock]->fsize += BLOCK_SIZE;
+
+		}
+
+		bytesToWrite = size;
+		if (size > BLOCK_SIZE) {
+			bytesToWrite = BLOCK_SIZE;
+		}
+
+		currBlock++;
+		currPos = 0;
+
+	}
+
+	//write updated index block and directory entries to disk
+	write_index_block(&index_block, file_index);
+	write_directory_entry(&dir);
 	return size;
 }
 
@@ -513,6 +593,14 @@ void write_index_block(cs1550_index_block *index, long blockNum) {
   fclose(disk);
 }
 
+//write/overwrite index block into given block number
+void write_disk_block(cs1550_disk_block *disk_block, long blockNum) {
+  FILE *disk = fopen(".disk", "r+b");
+  fseek(disk, blockNum * BLOCK_SIZE, SEEK_SET);
+  fwrite(disk_block, BLOCK_SIZE, 1, disk);
+  fclose(disk);
+}
+
 // if subdir exists, return its start block. otherwise return -1
 long check_subdir(char *directory) {
   cs_1550_root_directory *root = open_root();
@@ -547,19 +635,6 @@ long check_file(char *directory, char *filename, char *extension) {
   }
   return -1;
 }
-
-// //create a directory with the given name
-// cs1550_directory_entry* allocate_directory(char *directory) {
-//   cs1550_directory_entry *d = malloc(BLOCK_SIZE);
-//
-//   FILE *f = fopen(".disk", "rb");
-//   if (f != NULL) {
-//     fseek(f, nStartBlock * BLOCK_SIZE, SEEK_SET);
-//     fread(d, BLOCK_SIZE, 1, f);
-//     fclose(f);
-//   }
-//   return d;
-// }
 
 //DO NOT MODIFY BELOW THIS LINE ================================================
 
