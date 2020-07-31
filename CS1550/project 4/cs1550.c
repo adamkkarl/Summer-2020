@@ -90,6 +90,25 @@ struct cs1550_disk_block
 
 typedef struct cs1550_disk_block cs1550_disk_block;
 
+/* Thanks to Mohammad Hasanzadeh Mofrad (@moh18) for these
+   two functions */
+static void * cs1550_init(struct fuse_conn_info* fi)
+{
+	  (void) fi;
+    printf("We're all gonna live from here ....\n");
+    cs1550_root_directory *root = malloc(BLOCK_SIZE);
+    root->lastAllocatedBlock = 0;
+    root->nDirectories = 0;
+    write_root(root);
+		return NULL;
+}
+
+static void cs1550_destroy(void* args)
+{
+		(void) args;
+    printf("... and die like a boss here\n");
+}
+
 /*
  * Called whenever the system wants to know the file attributes, including
  * simply whether the file exists or not.
@@ -137,7 +156,6 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
 	return res;
 }
 
-
 /*
  * Called whenever the contents of a directory are desired. Could be from an 'ls'
  * or could even be when a user hits TAB to do autocompletion
@@ -175,7 +193,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
       //else directory is in disk
       filler(buf, ".", NULL, 0);
       filler(buf, "..", NULL, 0);
-      
+
       cs1550_root_directory *root = open_root();
 
       int i;
@@ -208,52 +226,9 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	return 0;
 }
 
-// parse the path name into directory, filename, and extension
-void parse_path(const char *path, char *directory, char *filename, char *extension) {
-  //make sure each ends with null terminator
-  directory[0] = '\0';
-  filename[0] = '\0';
-  extension[0] = '\0';
-  sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension); //read into variables
-}
-
-//open disk, return root directory
-cs1550_root_directory open_root(void) {
-  cs1550_root_directory root;
-  
-  FILE *f = fopen(".disk", "rb");
-  fseek(f, 0, SEEK_SET); //root at block 0
-  fread(&root, BLOCK_SIZE, 1, f)
-  return root;
-}
-
-// if subdir exists, return its start block. otherwise return -1
-long check_subdir(char *directory) {
-  cs_1550_root_directory *root = open_root();
-  for (int i=0; i < root->nDirectories; i++) {
-    testDir = root->directories[i].dname;
-    if (strncmp(directory, testDir) == 0) { //check name against directory name in root
-      free(root);
-      return root->directories[i].nStartBlock; //return start block
-    }
-  }
-  return -1;
-}
 
 
-//create a directory with the given name
-cs1550_directory_entry* allocate_directory(char *directory) {
-  cs1550_directory_entry *d = malloc(BLOCK_SIZE);
-  
-  FILE *f = fopen(".disk", "rb");
-  if (f != NULL) {
-    fseek(f, nStartBlock * BLOCK_SIZE, SEEK_SET);
-    fread(d, BLOCK_SIZE, 1, f);
-    fclose(f);
-  }
-  return d;
 
-}
 
 /*
  * Creates a directory. We can ignore mode since we're not dealing with
@@ -268,7 +243,6 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 	(void) path;
 	(void) mode;
 
-  //////////////////////////////////
   char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
   char filename[MAX_FILENAME + 1];
   char extension[MAX_EXTENSION + 1];
@@ -310,40 +284,12 @@ static int cs1550_mkdir(const char *path, mode_t mode)
     fwrite(&dir, BLOCK_SIZE, 1, disk); //write directory entry block
     fclose(disk);
 
-    
+
   } else {
     printf("Cannot create any more files here");
     //throw error???
   }
-  
-  //////////////////////////////////
-
 	return 0;
-}
-
-//write/overwrite root block
-void write_root(cs1550_root_directory *root) {
-  FILE *disk = fopen(".disk", "r+b");
-  fwrite(root, BLOCK_SIZE, 1, disk);
-  fclose(disk);
-}
-
-//write/overwrite directory entry into free block
-void write_directory_entry(cs1550_directory_entry *dir, long blockNum) {
-  FILE *disk = fopen(".disk", "r+b");
-  fseek(disk, blockNum * BLOCK_SIZE, SEEK_SET);
-  fwrite(dir, BLOCK_SIZE, 1, disk);
-  fclose(disk);
-}
-
-/*
- * Removes a directory.
- */
-// DO NOT MODIFY
-static int cs1550_rmdir(const char *path)
-{
-	(void) path;
-    return 0;
 }
 
 /*
@@ -396,40 +342,18 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     strncpy(new_file_dir->fname, filename);
     strncpy(new_file_dir->fext, extension);
     new_file_dir->fsize = 0;
-    
+
     dir->files[nFiles]
 
-
-    
 
 
   } else {
     //throw error?
     ;
   }
-
-
   //////////////////////////////////
 
 	return 0;
-}
-
-long useNextFreeBlock() {
-  cs1550_root_directory root = read_root();
-  long ret = root->lastAllocatedBlock++;
-  write_root(root);
-  return ret;
-}
-
-/*
- * Deletes a file
- */
-// DO NOT MODIFY
-static int cs1550_unlink(const char *path)
-{
-    (void) path;
-
-    return 0;
 }
 
 /*
@@ -462,6 +386,97 @@ static int cs1550_write(const char *path, const char *buf, size_t size,
 	(void) path;
 
 	return size;
+}
+
+//HELPER FUNCTIONS =============================================================
+// parse the path name into directory, filename, and extension
+void parse_path(const char *path, char *directory, char *filename, char *extension) {
+  //make sure each ends with null terminator
+  directory[0] = '\0';
+  filename[0] = '\0';
+  extension[0] = '\0';
+  sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension); //read into variables
+}
+
+//open disk, return root directory
+cs1550_root_directory open_root(void) {
+  cs1550_root_directory root;
+
+  FILE *f = fopen(".disk", "rb");
+  fseek(f, 0, SEEK_SET); //root at block 0
+  fread(&root, BLOCK_SIZE, 1, f)
+  return root;
+}
+
+long useNextFreeBlock() {
+  cs1550_root_directory root = read_root();
+  long ret = root->lastAllocatedBlock++;
+  write_root(root);
+  return ret;
+}
+
+//write/overwrite root block
+void write_root(cs1550_root_directory *root) {
+  FILE *disk = fopen(".disk", "r+b");
+  fwrite(root, BLOCK_SIZE, 1, disk);
+  fclose(disk);
+}
+
+//write/overwrite directory entry into free block
+void write_directory_entry(cs1550_directory_entry *dir, long blockNum) {
+  FILE *disk = fopen(".disk", "r+b");
+  fseek(disk, blockNum * BLOCK_SIZE, SEEK_SET);
+  fwrite(dir, BLOCK_SIZE, 1, disk);
+  fclose(disk);
+}
+
+// if subdir exists, return its start block. otherwise return -1
+long check_subdir(char *directory) {
+  cs_1550_root_directory *root = open_root();
+  for (int i=0; i < root->nDirectories; i++) {
+    testDir = root->directories[i].dname;
+    if (strncmp(directory, testDir) == 0) { //check name against directory name in root
+      free(root);
+      return root->directories[i].nStartBlock; //return start block
+    }
+  }
+  return -1;
+}
+
+// //create a directory with the given name
+// cs1550_directory_entry* allocate_directory(char *directory) {
+//   cs1550_directory_entry *d = malloc(BLOCK_SIZE);
+//
+//   FILE *f = fopen(".disk", "rb");
+//   if (f != NULL) {
+//     fseek(f, nStartBlock * BLOCK_SIZE, SEEK_SET);
+//     fread(d, BLOCK_SIZE, 1, f);
+//     fclose(f);
+//   }
+//   return d;
+// }
+
+//DO NOT MODIFY BELOW THIS LINE ================================================
+
+/*
+ * Removes a directory.
+ */
+// DO NOT MODIFY
+static int cs1550_rmdir(const char *path)
+{
+	(void) path;
+    return 0;
+}
+
+/*
+ * Deletes a file
+ */
+// DO NOT MODIFY
+static int cs1550_unlink(const char *path)
+{
+    (void) path;
+
+    return 0;
 }
 
 /*
@@ -521,24 +536,7 @@ static int cs1550_flush (const char *path , struct fuse_file_info *fi)
 	return 0; //success!
 }
 
-/* Thanks to Mohammad Hasanzadeh Mofrad (@moh18) for these
-   two functions */
-static void * cs1550_init(struct fuse_conn_info* fi)
-{
-	  (void) fi;
-    printf("We're all gonna live from here ....\n");
-    cs1550_root_directory *root = malloc(BLOCK_SIZE);
-    root->lastAllocatedBlock = 0;
-    root->nDirectories = 0;
-    write_root(root);
-		return NULL;
-}
 
-static void cs1550_destroy(void* args)
-{
-		(void) args;
-    printf("... and die like a boss here\n");
-}
 
 
 //register our new functions as the implementations of the syscalls
