@@ -93,9 +93,9 @@ typedef struct cs1550_disk_block cs1550_disk_block;
 
 //define helper functions
 void parse_path(const char *path, char *directory, char *filename, char *extension);
-cs1550_root_directory open_root(void);
-cs1550_directory_entry open_dir(long blockNum);
-cs1550_index_block open_file(long blockNum);
+cs1550_root_directory *open_root(void);
+cs1550_directory_entry *open_dir(long blockNum);
+cs1550_index_block *open_file(long blockNum);
 long useNextFreeBlock(void);
 void write_root(cs1550_root_directory *root);
 void write_directory_entry(cs1550_directory_entry *dir, long blockNum);
@@ -193,10 +193,10 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	if (strcmp(path, "/") != 0) { //if root dir
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
-    cs1550_root_directory root = open_root();
+    cs1550_root_directory *root = open_root();
 		int i;
-    for (i=0; i < root.nDirectories; i++) {
-      filler(buf, root.directories[i].dname + 1, NULL, 0);
+    for (i=0; i < root->nDirectories; i++) {
+      filler(buf, root->directories[i].dname + 1, NULL, 0);
     }
   } else { //subdirectory
     char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
@@ -213,14 +213,14 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
       filler(buf, ".", NULL, 0);
       filler(buf, "..", NULL, 0);
 
-			cs1550_directory_entry dir = open_dir(nStartBlock);
+			cs1550_directory_entry *dir = open_dir(nStartBlock);
 			int i;
-			for(i=0; i < dir.nFiles; i++) {
+			for(i=0; i < dir->nFiles; i++) {
 				char name[MAX_FILENAME + MAX_EXTENSION + 2]; //space for null term + .
-				strcpy(name, dir.files[i].fname);
-				if (strncmp(dir.files[i].fext, "\0", 1) != 0) {
+				strcpy(name, dir->files[i].fname);
+				if (strncmp(dir->files[i].fext, "\0", 1) != 0) {
 					strcat(name, ".");
-					strcat(name, dir.files[i].fext);
+					strcat(name, dir->files[i].fext);
 				}
 				filler(buf, name + 1, NULL, 0);
 			}
@@ -263,26 +263,26 @@ static int cs1550_mkdir(const char *path, mode_t mode)
     return -EEXIST;
   }
 
-  cs1550_root_directory root = open_root();
-  if (root.nDirectories < MAX_DIRS_IN_ROOT) { //if able to create more
-    long freeBlock = root.lastAllocatedBlock + 1; //block num of new directory entry
+  cs1550_root_directory *root = open_root();
+  if (root->nDirectories < MAX_DIRS_IN_ROOT) { //if able to create more
+    long freeBlock = root->lastAllocatedBlock + 1; //block num of new directory entry
 
     //update root directory
-    strncpy(root.directories[root.nDirectories].dname, directory, MAX_FILENAME); //add subdir name to root
-    root.directories[root.nDirectories].nStartBlock = freeBlock;
-    root.nDirectories++;
-    root.lastAllocatedBlock++;
-    write_root(&root);
+    strncpy(root->directories[root->nDirectories].dname, directory, MAX_FILENAME); //add subdir name to root
+    root->directories[root->nDirectories].nStartBlock = freeBlock;
+    root->nDirectories++;
+    root->lastAllocatedBlock++;
+    write_root(root);
 
     //create directory entry
-    cs1550_directory_entry dir;
-		memset(&dir, 0, BLOCK_SIZE); //clear mem just in case
-    dir.nFiles = 0; //starts empty
+    cs1550_directory_entry *dir = malloc(BLOCK_SIZE);
+		memset(dir, 0, BLOCK_SIZE); //clear mem just in case
+    dir->nFiles = 0; //starts empty
 
     //write directory entry to free block
     FILE *disk = fopen(".disk", "r+b");
     fseek(disk, freeBlock * BLOCK_SIZE, SEEK_SET);
-    fwrite(&dir, BLOCK_SIZE, 1, disk); //write directory entry block
+    fwrite(dir, BLOCK_SIZE, 1, disk); //write directory entry block
     fclose(disk);
 
   } else {
@@ -324,14 +324,14 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     //read in the corresponding cs1550_directory_entry
     FILE *disk = fopen(".disk", "r+b");
     fseek(disk, nStartBlock * BLOCK_SIZE, SEEK_SET);
-    cs1550_directory_entry dir;
+    cs1550_directory_entry *dir;
     fread(&dir, BLOCK_SIZE, 1, disk);
     fclose(disk);
 
     //look for matching files in directory
     int i;
-    for(i=0; i < dir.nFiles; i++) {
-      struct cs1550_file_directory currFileDir = dir.files[i];
+    for(i=0; i < dir->nFiles; i++) {
+      struct cs1550_file_directory currFileDir = dir->files[i];
       if (strncmp(currFileDir.fname, filename, MAX_FILENAME) == 0 && strncmp(currFileDir.fext, extension, MAX_EXTENSION) == 0) {
         //file already in directory
         return -EEXIST;
@@ -345,13 +345,13 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     strncpy(new_file_dir.fext, extension, MAX_EXTENSION);
 		new_file_dir.fsize = 0;
 		new_file_dir.nIndexBlock = indexBlockLoc;
-    dir.files[dir.nFiles] = new_file_dir;
-		dir.nFiles++;
-		write_directory_entry(&dir, nStartBlock);
+    dir->files[dir->nFiles] = new_file_dir;
+		dir->nFiles++;
+		write_directory_entry(dir, nStartBlock);
 
 		//create and write index block
-		struct cs1550_index_block indexBlock;
-		write_index_block(&indexBlock, indexBlockLoc);
+		struct cs1550_index_block *indexBlock = malloc(BLOCK_SIZE);
+		write_index_block(indexBlock, indexBlockLoc);
 
   } else {
     //throw error?
@@ -402,48 +402,49 @@ void parse_path(const char *path, char *directory, char *filename, char *extensi
 }
 
 //open disk, return root directory
-cs1550_root_directory open_root(void) {
-  cs1550_root_directory root;
+cs1550_root_directory *open_root(void) {
+  cs1550_root_directory *root  = malloc(BLOCK_SIZE);
 
-  FILE *f = fopen(".disk", "rb");
+  FILE *f = fopen(".disk", "rb+");
   fseek(f, 0, SEEK_SET); //root at block 0
-  fread(&root, BLOCK_SIZE, 1, f);
+  fread(root, BLOCK_SIZE, 1, f);
   return root;
 }
 
 //open disk, return cs1550_directory_entry at given block number
-cs1550_directory_entry open_dir(long blockNum) {
-  cs1550_directory_entry dir;
+cs1550_directory_entry *open_dir(long blockNum) {
+  cs1550_directory_entry *dir  = malloc(BLOCK_SIZE);
 
   FILE *f = fopen(".disk", "rb");
   fseek(f, blockNum * BLOCK_SIZE, SEEK_SET); //seek to location
-  fread(&dir, BLOCK_SIZE, 1, f);
+  fread(dir, BLOCK_SIZE, 1, f);
   return dir;
 }
 
 //open disk, return cs1550_index_block at given block number
-cs1550_index_block open_file(long blockNum) {
-  cs1550_index_block index;
+cs1550_index_block *open_file(long blockNum) {
+  cs1550_index_block *index = malloc(BLOCK_SIZE);
 
   FILE *f = fopen(".disk", "rb");
   fseek(f, blockNum * BLOCK_SIZE, SEEK_SET); //seek to location
-  fread(&index, BLOCK_SIZE, 1, f);
+  fread(index, BLOCK_SIZE, 1, f);
   return index;
 }
 
 // return next free block, then increment lastAllocatedBlock
 long useNextFreeBlock() {
-  cs1550_root_directory root = open_root();
-  long ret = root.lastAllocatedBlock + 1;
-	root.lastAllocatedBlock++;
-  write_root(&root);
+  cs1550_root_directory *root = open_root();
+  long ret = root->lastAllocatedBlock + 1;
+	root->lastAllocatedBlock++;
+  write_root(root);
   return ret;
 }
 
 //write/overwrite root block
 void write_root(cs1550_root_directory *root) {
 	printf("write started\n");
-  FILE *disk = fopen(".disk", "r+b");
+  FILE *disk = fopen(".disk", "rb+");
+	fseek(disk, 0, SEEK_SET);
   fwrite(root, BLOCK_SIZE, 1, disk);
   fclose(disk);
 	printf("write ended\n");
@@ -475,14 +476,14 @@ void write_disk_block(cs1550_disk_block *disk_block, long blockNum) {
 
 // if subdir exists, return its start block. otherwise return -1
 long check_subdir(char *directory) {
-  cs1550_root_directory root;
+  cs1550_root_directory *root;
 	root = open_root();
 	int i;
-  for (i=0; i < root.nDirectories; i++) {
+  for (i=0; i < root->nDirectories; i++) {
     char testDir[MAX_FILENAME + 1];
-		strncpy(testDir, root.directories[i].dname, MAX_FILENAME);
+		strncpy(testDir, root->directories[i].dname, MAX_FILENAME);
     if (strncmp(directory, testDir, MAX_FILENAME) == 0) { //check name against directory name in root
-      return root.directories[i].nStartBlock; //return start block
+      return root->directories[i].nStartBlock; //return start block
     }
   }
   return -1;
@@ -490,20 +491,20 @@ long check_subdir(char *directory) {
 
 // if file exists, return its start block. otherwise return -1
 long check_file(char *directory, char *filename, char *extension) {
-  cs1550_root_directory root = open_root();
+  cs1550_root_directory *root = open_root();
 	int i;
-  for (i=0; i < root.nDirectories; i++) {
+  for (i=0; i < root->nDirectories; i++) {
 		char testDir[MAX_FILENAME + 1];
-		strncpy(testDir, root.directories[i].dname, MAX_FILENAME);
+		strncpy(testDir, root->directories[i].dname, MAX_FILENAME);
     if (strncmp(directory, testDir, MAX_FILENAME) == 0) { //check name against directory name in root
-      long dirStartBlock = root.directories[i].nStartBlock; //return start block
-			cs1550_directory_entry dir = open_dir(dirStartBlock);
+      long dirStartBlock = root->directories[i].nStartBlock; //return start block
+			cs1550_directory_entry *dir = open_dir(dirStartBlock);
 
 			int j;
-			for (j=0; j < dir.nFiles; j++) {
-					if (strcmp(dir.files[j].fname, filename) == 0 && strcmp(dir.files[j].fext, extension) == 0) {
+			for (j=0; j < dir->nFiles; j++) {
+					if (strcmp(dir->files[j].fname, filename) == 0 && strcmp(dir->files[j].fext, extension) == 0) {
 						//match filename and extension!
-						return dir.files[j].nIndexBlock;
+						return dir->files[j].nIndexBlock;
 					}
 			}
     }
