@@ -90,16 +90,26 @@ struct cs1550_disk_block
 
 typedef struct cs1550_disk_block cs1550_disk_block;
 
+//define helper functions
+void parse_path(const char *path, char *directory, char *filename, char *extension);
+cs1550_root_directory open_root(void);
+cs1550_directory_entry open_dir(long blockNum);
+long useNextFreeBlock();
+void write_root(cs1550_root_directory *root);
+void write_directory_entry(cs1550_directory_entry *dir, long blockNum);
+void write_index_block(cs1550_index_block *index, long blockNum);
+long check_subdir(char *directory);
+
 /* Thanks to Mohammad Hasanzadeh Mofrad (@moh18) for these
    two functions */
 static void * cs1550_init(struct fuse_conn_info* fi)
 {
 	  (void) fi;
     printf("We're all gonna live from here ....\n");
-    cs1550_root_directory *root = malloc(BLOCK_SIZE);
+    cs1550_root_directory root;
     root->lastAllocatedBlock = 0;
     root->nDirectories = 0;
-    write_root(root);
+    write_root(&root);
 		return NULL;
 }
 
@@ -114,9 +124,10 @@ static void cs1550_destroy(void* args)
  * simply whether the file exists or not.
  *
  * man -s 2 stat will show the fields of a stat structure
+ *
+ * Return 0 on success, with correctly set structure
+ * Return -ENOENT if file not found
  */
-// Return 0 on success, with correctly set structure
-// Return -ENOENT if file not found
 static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
 	int res = 0;
@@ -159,9 +170,10 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
 /*
  * Called whenever the contents of a directory are desired. Could be from an 'ls'
  * or could even be when a user hits TAB to do autocompletion
+ *
+ * Return 0 on success
+ * Return -ENOENT if dir is not valid or not found
  */
-// Return 0 on success
-// Return -ENOENT if dir is not valid or not found
 static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi)
 {
@@ -178,7 +190,6 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     for (int i=0; i < root->nDirectories; i++) {
       filler(buf, root->directories[i].dname + 1, NULL, 0);
     }
-    return 0;
   } else { //subdirectory
     char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
     char filename[MAX_FILENAME + 1];
@@ -194,50 +205,32 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
       filler(buf, ".", NULL, 0);
       filler(buf, "..", NULL, 0);
 
-      cs1550_root_directory *root = open_root();
-
-      int i;
-      found = false
-      for (i=0; i < MAX_DIRS_IN_ROOT; i++) {
-        if (strncmp(directory, root->directories[i].dname) == 0) {
-          //matched
-          found = true;
-          break;
-        }
-      }
-
-      if (!found) {
-        //dir not found
-        return -ENOENT
-      }
-      FILE *disk = fopen(".disc", "rb+");
-      fseek(disk, ); ///////////////////////////////
-
-
+			cs1550_directory_entry dir = open_dir(nStartBlock);
+			int i;
+			for(i=0; i < dir->nFiles; i++) {
+				char *name = char[MAX_FILENAME + MAX_EXTENSION + 2] //space for null term + .
+				strcpy(name, dir->files[i].fname);
+				if (strncmp(dir->files[i].fext, "\0") != 0) {
+					strcat(name, ".");
+					strcat(name, dir->files[i].fext);
+				}
+				filler(buf, name + 1, NULL, 0);
+			}
     }
-
   }
 
-	/*
-	//add the user stuff (subdirs or files)
-	//the +1 skips the leading '/' on the filenames
-	filler(buf, newpath + 1, NULL, 0);
-	*/
 	return 0;
 }
-
-
-
-
 
 /*
  * Creates a directory. We can ignore mode since we're not dealing with
  * permissions, as long as getattr returns appropriate ones for us.
+ *
+ * Return 0 on success
+ * Return -ENAMETOOLONG if name > 8 chars
+ * Return -EPERM if directory isn't under root dir only
+ * Return -EEXIST if directory already exists
  */
-// Return 0 on success
-// Return -ENAMETOOLONG if name > 8 chars
-// Return -EPERM if directory isn't under root dir only
-// Return -EEXIST if directory already exists
 static int cs1550_mkdir(const char *path, mode_t mode)
 {
 	(void) path;
@@ -295,18 +288,17 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 /*
  * Does the actual creation of a file. Mode and dev can be ignored.
  *
+ * Return 0 on success
+ * Return -ENAMETOOLONG if name beyond 8 chars ?
+ * Return -EPERM if file is trying to be created in root dir
+ * Return -EEXIST if file already exists
  */
-// Return 0 on success
-// Return -ENAMETOOLONG if name beyond 8 chars ?
-// Return -EPERM if file is trying to be created in root dir
-// Return -EEXIST if file already exists
 static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 {
 	(void) mode;
 	(void) dev;
 	(void) path;
 
-  //////////////////////////////////
   char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
   char filename[MAX_FILENAME + 1];
   char extension[MAX_EXTENSION + 1];
@@ -338,27 +330,32 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
         return -EEXIST;
       }
     }
+		long indexBlockLoc = useNextFreeBlock;
+
+		//update directory entry
     struct cs1550_file_directory new_file_dir;
     strncpy(new_file_dir->fname, filename);
     strncpy(new_file_dir->fext, extension);
-    new_file_dir->fsize = 0;
+		new_file_dir->fsize = 0;
+		new_file_dir->nIndexBlock = indexBlockLoc;
+    dir->files[nFiles] = new_file_dir;
+		dir->nFiles++;
+		write_directory_entry(&dir, nStartBlock);
 
-    dir->files[nFiles]
-
-
+		//create and write index block
+		struct cs1550_index_block indexBlock;
+		write_index_block(&indexBlock, indexBlockLoc);
 
   } else {
     //throw error?
-    ;
+		printf("cannot find directory")
   }
-  //////////////////////////////////
 
 	return 0;
 }
 
 /*
  * Read size bytes from file into buf starting from offset
- *
  */
 static int cs1550_read(const char *path, char *buf, size_t size, off_t offset,
 			  struct fuse_file_info *fi)
@@ -408,6 +405,16 @@ cs1550_root_directory open_root(void) {
   return root;
 }
 
+//open disk, return cs1550_directory_entry at given block number
+cs1550_directory_entry open_dir(long blockNum) {
+  cs1550_directory_entry dir;
+
+  FILE *f = fopen(".disk", "rb");
+  fseek(f, blockNum * BLOCK_SIZE, SEEK_SET); //seek to location
+  fread(&dir, BLOCK_SIZE, 1, f)
+  return dir;
+}
+
 long useNextFreeBlock() {
   cs1550_root_directory root = read_root();
   long ret = root->lastAllocatedBlock++;
@@ -422,11 +429,19 @@ void write_root(cs1550_root_directory *root) {
   fclose(disk);
 }
 
-//write/overwrite directory entry into free block
+//write/overwrite directory entry into given block number
 void write_directory_entry(cs1550_directory_entry *dir, long blockNum) {
   FILE *disk = fopen(".disk", "r+b");
   fseek(disk, blockNum * BLOCK_SIZE, SEEK_SET);
   fwrite(dir, BLOCK_SIZE, 1, disk);
+  fclose(disk);
+}
+
+//write/overwrite index block into given block number
+void write_index_block(cs1550_index_block *index, long blockNum) {
+  FILE *disk = fopen(".disk", "r+b");
+  fseek(disk, blockNum * BLOCK_SIZE, SEEK_SET);
+  fwrite(index, BLOCK_SIZE, 1, disk);
   fclose(disk);
 }
 
@@ -535,9 +550,6 @@ static int cs1550_flush (const char *path , struct fuse_file_info *fi)
 
 	return 0; //success!
 }
-
-
-
 
 //register our new functions as the implementations of the syscalls
 static struct fuse_operations hello_oper = {
