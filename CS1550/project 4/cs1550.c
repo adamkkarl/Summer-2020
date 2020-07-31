@@ -94,6 +94,8 @@ typedef struct cs1550_disk_block cs1550_disk_block;
 void parse_path(const char *path, char *directory, char *filename, char *extension);
 cs1550_root_directory open_root(void);
 cs1550_directory_entry open_dir(long blockNum);
+cs1550_index_block open_file(long blockNum);
+cs1550_disk_block open_disk_block(long blockNum);
 long useNextFreeBlock();
 void write_root(cs1550_root_directory *root);
 void write_directory_entry(cs1550_directory_entry *dir, long blockNum);
@@ -374,8 +376,45 @@ static int cs1550_read(const char *path, char *buf, size_t size, off_t offset,
 	get_path(path, directory, filename, extension);
 
 	long file_index = check_file(directory, filename, extension);
+	cs1550_index_block index_block = open_file(file_index);
+	long currBlock = offset / BLOCK_SIZE; //which disk block do we start in
 
+	int currPos = offset % BLOCK_SIZE;
+	int bytesLeftInFirstBlock = BLOCK_SIZE - currPos
 
+	cs1550_disk_block disk_block;
+	int buf_write_index = 0;
+
+	if (file_index->entries[currBlock] != 0) { //block exists
+		disk_block = open_disk_block(indexBlock->entries[currBlock]);
+
+		int bytesToRead = bytesLeftInFirstBlock;
+		if (size < bytesLeftInFirstBlock) {
+			bytesToRead = size;
+		}
+		while (bytesToRead > 0) {
+			buf[buf_write_index++] = disk_block->data[currPos++]
+			size -=1;
+			bytesToRead -1;
+		}
+		currBlock++;
+	}
+
+	while (size > 0 && file_index[currBlock] != 0) { //still need to read and data left in file
+		disk_block = open_disk_block(indexBlock->entries[currBlock]);
+
+		int bytesToRead = size % BLOCK_SIZE;
+		currPos = 0;
+
+		while (bytesToRead > 0) {
+			buf[buf_write_index++] = disk_block->data[currPos++]
+			size -=1;
+			bytesToRead -1;
+		}
+
+		currPos = 0;
+		currBlock += 1;
+	}
 	return size;
 }
 
@@ -410,7 +449,7 @@ cs1550_root_directory open_root(void) {
 
   FILE *f = fopen(".disk", "rb");
   fseek(f, 0, SEEK_SET); //root at block 0
-  fread(&root, BLOCK_SIZE, 1, f)
+  fread(&root, BLOCK_SIZE, 1, f);
   return root;
 }
 
@@ -420,8 +459,28 @@ cs1550_directory_entry open_dir(long blockNum) {
 
   FILE *f = fopen(".disk", "rb");
   fseek(f, blockNum * BLOCK_SIZE, SEEK_SET); //seek to location
-  fread(&dir, BLOCK_SIZE, 1, f)
+  fread(&dir, BLOCK_SIZE, 1, f);
   return dir;
+}
+
+//open disk, return cs1550_index_block at given block number
+cs1550_index_block open_file(long blockNum) {
+  cs1550_index_block index;
+
+  FILE *f = fopen(".disk", "rb");
+  fseek(f, blockNum * BLOCK_SIZE, SEEK_SET); //seek to location
+  fread(&index, BLOCK_SIZE, 1, f);
+  return index;
+}
+
+//open disk, return cs1550_disk_block at given block number
+cs1550_disk_block open_disk_block(long blockNum) {
+  cs1550_disk_block disk_block;
+
+  FILE *f = fopen(".disk", "rb");
+  fseek(f, blockNum * BLOCK_SIZE, SEEK_SET); //seek to location
+  fread(&disk_block, BLOCK_SIZE, 1, f);
+  return disk_block;
 }
 
 long useNextFreeBlock() {
