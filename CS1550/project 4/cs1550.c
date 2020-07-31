@@ -109,27 +109,31 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = 2;
 	} else {
+    char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
+    char filename[MAX_FILENAME + 1];
+    char extension[MAX_EXTENSION + 1];
+    parse_path(path, directory, filename, extension);
 
-	//Check if name is subdirectory
-	/*
-		//Might want to return a structure with these fields
-		stbuf->st_mode = S_IFDIR | 0755;
-		stbuf->st_nlink = 2;
-		res = 0; //no error
-	*/
-
-	//Check if name is a regular file
-	/*
-		//regular file, probably want to be read and write
-		stbuf->st_mode = S_IFREG | 0666;
-		stbuf->st_nlink = 1; //file links
-		stbuf->st_size = 0; //file size - make sure you replace with real size!
-		res = 0; // no error
-	*/
-
-		//Else return that path doesn't exist
-		res = -ENOENT;
-	}
+    if (strncmp(directory, "\0") != 0 && strncmp(filename, "\0") == 0) { //Check if name is subdirectory
+      if (check_subdir(directory) != -1) {
+        //Might want to return a structure with these fields
+        stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_nlink = 2;
+        res = 0; //no error
+      } else {
+        res = -ENOENT;
+      }
+    } else if (strncmp(directory, "\0") != 0 && strncmp(filename, "\0") != 0) { //Check if name is a regular file
+      //regular file, probably want to be read and write
+      stbuf->st_mode = S_IFREG | 0666;
+      stbuf->st_nlink = 1; //file links
+      stbuf->st_size = 0; //file size - make sure you replace with real size!
+      res = 0; // no error
+	  } else {
+      //Else return that path doesn't exist
+      res = -ENOENT;
+    }
+  }
 	return res;
 }
 
@@ -167,6 +171,57 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	return 0;
 }
 
+// parse the path name into directory, filename, and extension
+void parse_path(const char *path, char *directory, char *filename, char *extension) 
+{h 
+  //make sure each ends with null terminator
+  directory[0] = '\0';
+  filename[0] = '\0';
+  extension[0] = '\0';
+  sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension); //read into variables
+}
+
+//open disk, return root directory
+cs1550_root_directory open_root(void) {
+  cs1550_root_directory *root = malloc(BLOCK_SIZE);
+  FILE *f = fopen(".disk", "rb");
+  if (f != NULL) {
+    fread(root, BLOCK_SIZE, 1, f);
+    fclose(f);
+  }
+  return root;
+}
+
+// if subdir exists, return its start block. otherwise return -1
+long check_subdir(char *directory) {
+  cs_1550_root_directory *root = open_root();
+  for (int i=0; i < root->nDirectories; i++) {
+    testDir = root->directories[i].dname;
+    if (strncmp(directory, testDir) == 0) { //check name against directory name in root
+      free(root);
+      return root->directories[i].nStartBlock; //return start block
+    }
+  }
+  free(root);
+  return -1;
+}
+
+
+
+//create a directory with the given name
+cs1550_directory_entry* allocate_directory(char *directory) {
+  cs1550_directory_entry *d = malloc(BLOCK_SIZE);
+  
+  FILE *f = fopen(".disk", "rb");
+  if (f != NULL) {
+    fseek(f, nStartBlock * BLOCK_SIZE, SEEK_SET);
+    fread(d, BLOCK_SIZE, 1, f);
+    fclose(f);
+  }
+  return d;
+
+}
+
 /*
  * Creates a directory. We can ignore mode since we're not dealing with
  * permissions, as long as getattr returns appropriate ones for us.
@@ -179,6 +234,24 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 {
 	(void) path;
 	(void) mode;
+
+  //////////////////////////////////
+  char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
+  char filename[MAX_FILENAME + 1];
+  char extension[MAX_EXTENSION + 1];
+  parse_path(path, directory, filename, extension);
+
+  if (strlen(directory) > MAX_FILENAME) { //file name too long
+    return -ENAMETOOLONG;
+  }
+
+  if (strncmp(filename, "\0") != 0) { //if filename not empty string => trying to make subdir not in root dir
+    return -EPERM;
+  }
+
+
+  
+  //////////////////////////////////
 
 	return 0;
 }
@@ -200,12 +273,33 @@ static int cs1550_rmdir(const char *path)
 // Return 0 on success
 // Return -ENAMETOOLONG if name beyond 8 chars ?
 // Return -EPERM if file is trying to be created in root dir
-// Return -EEXIXT if file already exists
+// Return -EEXIST if file already exists
 static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 {
 	(void) mode;
 	(void) dev;
 	(void) path;
+
+  //////////////////////////////////
+  char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
+  char filename[MAX_FILENAME + 1];
+  char extension[MAX_EXTENSION + 1];
+  parse_path(path, directory, filename, extension);
+
+  if (strlen(directory) > MAX_FILENAME || strlen(extension) > MAX_EXTENSION) { //filename/ext too long
+    return -ENAMETOOLONG;
+  }
+
+  if (strncmp(filename, "\0") == 0) { //if filename is empty string => trying to make file in root dir
+    return -EPERM;
+  }
+
+  cs1550_directory_entry *dir = cs1550_open(directory);
+  
+
+
+  //////////////////////////////////
+
 	return 0;
 }
 
