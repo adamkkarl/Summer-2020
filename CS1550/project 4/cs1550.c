@@ -240,7 +240,7 @@ static int cs1550_mkdir(const char *path, mode_t mode)
 	(void) path;
 	(void) mode;
 
-  char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
+  char directory[MAX_FILENAME]; //all strings need space for null terminator
   char filename[MAX_FILENAME + 1];
   char extension[MAX_EXTENSION + 1];
   parse_path(path, directory, filename, extension);
@@ -264,7 +264,7 @@ static int cs1550_mkdir(const char *path, mode_t mode)
     long freeBlock = root.lastAllocatedBlock + 1; //block num of new directory entry
 
     //update root directory
-    strncpy(root.directories[root.nDirectories].dname, directory, MAX_FILENAME + 1); //add subdir name to root
+    strncpy(root.directories[root.nDirectories].dname, directory, MAX_FILENAME); //add subdir name to root
     root.directories[root.nDirectories].nStartBlock = freeBlock;
     root.nDirectories++;
     root.lastAllocatedBlock++;
@@ -303,8 +303,8 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 	(void) path;
 
   char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
-  char filename[MAX_FILENAME + 1];
-  char extension[MAX_EXTENSION + 1];
+  char filename[MAX_FILENAME];
+  char extension[MAX_EXTENSION];
   parse_path(path, directory, filename, extension);
 
   if (strlen(directory) > MAX_FILENAME || strlen(extension) > MAX_EXTENSION) { //filename/ext too long
@@ -337,8 +337,8 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 
 		//update directory entry
     struct cs1550_file_directory new_file_dir;
-    strncpy(new_file_dir.fname, filename, MAX_FILENAME + 1);
-    strncpy(new_file_dir.fext, extension, MAX_EXTENSION + 1);
+    strncpy(new_file_dir.fname, filename, MAX_FILENAME);
+    strncpy(new_file_dir.fext, extension, MAX_EXTENSION);
 		new_file_dir.fsize = 0;
 		new_file_dir.nIndexBlock = indexBlockLoc;
     dir.files[dir.nFiles] = new_file_dir;
@@ -427,10 +427,10 @@ cs1550_index_block open_file(long blockNum) {
   return index;
 }
 
-
+// return next free block, then increment lastAllocatedBlock
 long useNextFreeBlock() {
   cs1550_root_directory root = open_root();
-  long ret = root.lastAllocatedBlock;
+  long ret = root.lastAllocatedBlock + 1;
 	root.lastAllocatedBlock++;
   write_root(&root);
   return ret;
@@ -474,7 +474,7 @@ long check_subdir(char *directory) {
 	int i;
   for (i=0; i < root.nDirectories; i++) {
     char testDir[MAX_FILENAME + 1];
-		strncpy(testDir, root.directories[i].dname, MAX_FILENAME + 1);
+		strncpy(testDir, root.directories[i].dname, MAX_FILENAME);
     if (strncmp(directory, testDir, MAX_FILENAME) == 0) { //check name against directory name in root
       return root.directories[i].nStartBlock; //return start block
     }
@@ -488,7 +488,7 @@ long check_file(char *directory, char *filename, char *extension) {
 	int i;
   for (i=0; i < root.nDirectories; i++) {
 		char testDir[MAX_FILENAME + 1];
-		strncpy(testDir, root.directories[i].dname, MAX_FILENAME + 1);
+		strncpy(testDir, root.directories[i].dname, MAX_FILENAME);
     if (strncmp(directory, testDir, MAX_FILENAME) == 0) { //check name against directory name in root
       long dirStartBlock = root.directories[i].nStartBlock; //return start block
 			cs1550_directory_entry dir = open_dir(dirStartBlock);
