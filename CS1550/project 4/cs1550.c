@@ -6,6 +6,8 @@
 	See the file COPYING.
 */
 
+//Adam Karl
+
 #define	FUSE_USE_VERSION 26
 
 #include <fuse.h>
@@ -95,7 +97,6 @@ typedef struct cs1550_disk_block cs1550_disk_block;
 void parse_path(const char *path, char *directory, char *filename, char *extension);
 cs1550_root_directory *open_root(void);
 cs1550_directory_entry *open_dir(long blockNum);
-cs1550_index_block *open_file(long blockNum);
 long useNextFreeBlock(void);
 void write_root(cs1550_root_directory *root);
 void write_directory_entry(cs1550_directory_entry *dir, long blockNum);
@@ -222,8 +223,8 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			char name[MAX_FILENAME + MAX_EXTENSION + 2]; //space for null term + .
 			strncpy(name, dir->files[i].fname, MAX_FILENAME);
 			if (strncmp(dir->files[i].fext, "\0", 1) != 0) {
-				strncat(name, ".", 1);
-				strncat(name, dir->files[i].fext, MAX_EXTENSION);
+				strcat(name, ".");
+				strcat(name, dir->files[i].fext);
 			}
 			filler(buf, name, NULL, 0);
 		}
@@ -341,8 +342,8 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 		long indexBlockLoc = useNextFreeBlock();
 
 		//update directory entry
-    strncpy(dir->files[dir->nFiles].fname, filename, MAX_FILENAME);
-    strncpy(dir->files[dir->nFiles].fext, extension, MAX_EXTENSION);
+    strcpy(dir->files[dir->nFiles].fname, filename);
+    strcpy(dir->files[dir->nFiles].fext, extension);
 		dir->files[dir->nFiles].fsize = 0;
 		dir->files[dir->nFiles].nIndexBlock = indexBlockLoc;
 
@@ -396,9 +397,6 @@ void parse_path(const char *path, char *directory, char *filename, char *extensi
 	memset(directory, 0, strlen(directory));
 	memset(filename, 0, strlen(filename));
 	memset(extension, 0, strlen(extension));
-  // directory[0] = '\0';
-  // filename[0] = '\0';
-  // extension[0] = '\0';
   sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension); //read into variables
 }
 
@@ -420,16 +418,6 @@ cs1550_directory_entry *open_dir(long blockNum) {
   fseek(f, blockNum * BLOCK_SIZE, SEEK_SET); //seek to location
   fread(dir, BLOCK_SIZE, 1, f);
   return dir;
-}
-
-//open disk, return cs1550_index_block at given block number
-cs1550_index_block *open_file(long blockNum) {
-  cs1550_index_block *index = malloc(BLOCK_SIZE);
-
-  FILE *f = fopen(".disk", "rb");
-  fseek(f, blockNum * BLOCK_SIZE, SEEK_SET); //seek to location
-  fread(index, BLOCK_SIZE, 1, f);
-  return index;
 }
 
 // return next free block, then increment lastAllocatedBlock
@@ -549,7 +537,6 @@ static int cs1550_truncate(const char *path, off_t size)
 
     return 0;
 }
-
 
 /*
  * Called when we open a file
