@@ -147,27 +147,37 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     parse_path(path, directory, filename, extension);
 
     if (strncmp(directory, "\0", 1) != 0 && strncmp(filename, "\0", 1) == 0) { //Check if name is subdirectory
+			printf("=======subdir attributes========\n");
       if (check_subdir(directory) != -1) {
         //Might want to return a structure with these fields
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
         return 0; //no error
       } else {
+				printf("=====didnt find subdir====\n");
         return -ENOENT;
       }
     } else if (strncmp(directory, "\0", 1) != 0 && strncmp(filename, "\0", 1) != 0) { //Check if name is a regular file
-      //regular file, probably want to be read and write
-      stbuf->st_mode = S_IFREG | 0666;
-      stbuf->st_nlink = 1; //file links
-      stbuf->st_size = 0; //file size - make sure you replace with real size!
-      return 0; // no error
+			//figure out if file is in memory
+			long blockNum = check_file(directory, filename, extension);
+			if (blockNum > -1) {
+				//file IS in memory
+				//regular file, probably want to be read and write
+				printf("=========file attributes=========!!!!!!!!!!!\n");
+	      stbuf->st_mode = S_IFREG | 0666;
+	      stbuf->st_nlink = 1; //file links
+	      stbuf->st_size = 0; //file size - make sure you replace with real size!
+	      return 0; // no error
+			} else {
+				//file not in memory
+				return -ENOENT;
+			}
 	  } else {
       //Else return that path doesn't exist
-			printf("===========path doesn't exist=========\n");
+			printf("===path doesn't exist===");
       return -ENOENT;
     }
   }
-	printf("===========bruh=========");
 	return -1;
 }
 
@@ -190,6 +200,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	if (strcmp(path, "/") == 0) { //if root dir
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
+		printf("====ROOT====\n");
     cs1550_root_directory *root = open_root();
 		int i;
     for (i=0; i < root->nDirectories; i++) {
@@ -197,6 +208,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
 		free(root);
   } else { //subdirectory
+		printf("====SUBDIR====\n");
     char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
     char filename[MAX_FILENAME + 1];
     char extension[MAX_EXTENSION + 1];
@@ -213,9 +225,11 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 		cs1550_directory_entry *dir = open_dir(nStartBlock); //malloc's dir
 		int i;
+		printf("====%d files in directory====\n", dir->nFiles);
 		for(i=0; i < dir->nFiles; i++) {
 			char name[MAX_FILENAME + MAX_EXTENSION + 2]; //space for null term + .
 			strcpy(name, dir->files[i].fname);
+			printf("===FOUND A FILE===\n");
 			if (strncmp(dir->files[i].fext, "\0", 1) != 0) {
 				strcat(name, ".");
 				strcat(name, dir->files[i].fext);
