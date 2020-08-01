@@ -100,7 +100,6 @@ long useNextFreeBlock(void);
 void write_root(cs1550_root_directory *root);
 void write_directory_entry(cs1550_directory_entry *dir, long blockNum);
 void write_index_block(cs1550_index_block *index, long blockNum);
-void write_disk_block(cs1550_disk_block *disk_block, long blockNum);
 long check_subdir(char *directory);
 long check_file(char *directory, char *filename, char *extension);
 
@@ -113,9 +112,7 @@ static void * cs1550_init(struct fuse_conn_info* fi)
     cs1550_root_directory *root = malloc(BLOCK_SIZE);
     root->lastAllocatedBlock = (long) 0;
     root->nDirectories = 0;
-		printf("gonna write root\n");
     write_root(root); //freed here
-		printf("finish init\n");
 		return NULL;
 }
 
@@ -136,15 +133,13 @@ static void cs1550_destroy(void* args)
  */
 static int cs1550_getattr(const char *path, struct stat *stbuf)
 {
-	printf("getattr\n");
-	int res = 0;
-
-	memset(stbuf, 0, sizeof(struct stat));
+	memset(stbuf, 0, sizeof(struct stat)); //zero out buffer
 
 	//is path the root dir ?
 	if (strcmp(path, "/") == 0) {
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = 2;
+		return 0;
 	} else {
     char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
     char filename[MAX_FILENAME + 1];
@@ -156,22 +151,24 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
         //Might want to return a structure with these fields
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
-        res = 0; //no error
+        return 0; //no error
       } else {
-        res = -ENOENT;
+        return -ENOENT;
       }
     } else if (strncmp(directory, "\0", 1) != 0 && strncmp(filename, "\0", 1) != 0) { //Check if name is a regular file
       //regular file, probably want to be read and write
       stbuf->st_mode = S_IFREG | 0666;
       stbuf->st_nlink = 1; //file links
       stbuf->st_size = 0; //file size - make sure you replace with real size!
-      res = 0; // no error
+      return 0; // no error
 	  } else {
       //Else return that path doesn't exist
-      res = -ENOENT;
+			printf("===========path doesn't exist=========\n");
+      return -ENOENT;
     }
   }
-	return res;
+	printf("===========bruh=========");
+	return -1;
 }
 
 /*
@@ -205,30 +202,28 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     char extension[MAX_EXTENSION + 1];
     parse_path(path, directory, filename, extension);
 
-    if (strncmp(directory, "\0", 1) != 0 && strncmp(filename, "\0", 1) == 0) { //if is valid subdir
-      int nStartBlock = check_subdir(directory);
-      if (nStartBlock == -1) { //subdir not found
-        return -ENOENT;
-      }
-      //else directory is in disk
-      filler(buf, ".", NULL, 0);
-      filler(buf, "..", NULL, 0);
-
-			cs1550_directory_entry *dir = open_dir(nStartBlock);
-			int i;
-			for(i=0; i < dir->nFiles; i++) {
-				char name[MAX_FILENAME + MAX_EXTENSION + 2]; //space for null term + .
-				strcpy(name, dir->files[i].fname);
-				if (strncmp(dir->files[i].fext, "\0", 1) != 0) {
-					strcat(name, ".");
-					strcat(name, dir->files[i].fext);
-				}
-				filler(buf, name, NULL, 0);
-			}
-			free(dir);
+    int nStartBlock = check_subdir(directory);
+    if (nStartBlock == -1) { //subdir not found
+			printf("===subdir not found===\n");
+      return -ENOENT;
     }
-  }
+    //else directory is in disk
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
 
+		cs1550_directory_entry *dir = open_dir(nStartBlock); //malloc's dir
+		int i;
+		for(i=0; i < dir->nFiles; i++) {
+			char name[MAX_FILENAME + MAX_EXTENSION + 2]; //space for null term + .
+			strcpy(name, dir->files[i].fname);
+			if (strncmp(dir->files[i].fext, "\0", 1) != 0) {
+				strcat(name, ".");
+				strcat(name, dir->files[i].fext);
+			}
+			filler(buf, name, NULL, 0);
+		}
+		free(dir); //free dir
+  }
 	return 0;
 }
 
@@ -243,7 +238,7 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
  */
 static int cs1550_mkdir(const char *path, mode_t mode)
 {
-	printf("mkdir call\n");
+	printf("==========mkdir call============\n");
 	(void) path;
 	(void) mode;
 
@@ -290,7 +285,7 @@ static int cs1550_mkdir(const char *path, mode_t mode)
     fclose(disk);
 
   } else {
-    printf("Cannot create any more files here");
+    printf("============Cannot create any more files here============\n");
     //throw error???
   }
 	return 0;
@@ -306,14 +301,14 @@ static int cs1550_mkdir(const char *path, mode_t mode)
  */
 static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 {
-	printf("mknod\n");
+	printf("=======mknod call========\n");
 	(void) mode;
 	(void) dev;
 	(void) path;
 
   char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
-  char filename[MAX_FILENAME];
-  char extension[MAX_EXTENSION];
+  char filename[MAX_FILENAME]; //removing th +1 helped with warnings for strcpy
+  char extension[MAX_EXTENSION]; //removing th +1 helped with warnings for strcpy
   parse_path(path, directory, filename, extension);
 
   if (strlen(directory) > MAX_FILENAME || strlen(extension) > MAX_EXTENSION) { //filename/ext too long
@@ -327,7 +322,8 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
   long nStartBlock = check_subdir(directory);
   if (nStartBlock != -1) { //if directory exists
     //read in the corresponding cs1550_directory_entry
-    FILE *disk = fopen(".disk", "r+b");
+		printf("========Directory exists==========\n");
+    FILE *disk = fopen(".disk", "rb+");
     fseek(disk, nStartBlock * BLOCK_SIZE, SEEK_SET);
     cs1550_directory_entry *dir;
     fread(&dir, BLOCK_SIZE, 1, disk);
@@ -361,7 +357,7 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 
   } else {
     //throw error?
-		printf("cannot find directory");
+		printf("===========cannot find directory============");
   }
 
 	return 0;
@@ -473,15 +469,6 @@ void write_index_block(cs1550_index_block *index, long blockNum) {
 	free(index);
 }
 
-//write/overwrite index block into given block number
-void write_disk_block(cs1550_disk_block *disk_block, long blockNum) {
-  FILE *disk = fopen(".disk", "r+b");
-  fseek(disk, blockNum * BLOCK_SIZE, SEEK_SET);
-  fwrite(disk_block, BLOCK_SIZE, 1, disk);
-  fclose(disk);
-	free(disk_block);
-}
-
 // if subdir exists, return its start block. otherwise return -1
 long check_subdir(char *directory) {
   cs1550_root_directory *root;
@@ -491,8 +478,9 @@ long check_subdir(char *directory) {
     char testDir[MAX_FILENAME + 1];
 		strncpy(testDir, root->directories[i].dname, MAX_FILENAME);
     if (strncmp(directory, testDir, MAX_FILENAME) == 0) { //check name against directory name in root
+			long ret = root->directories[i].nStartBlock;
 			free(root);
-			return root->directories[i].nStartBlock; //return start block
+			return ret; //return start block
     }
   }
 	free(root);
