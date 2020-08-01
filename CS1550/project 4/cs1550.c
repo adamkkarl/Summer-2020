@@ -147,14 +147,12 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
     parse_path(path, directory, filename, extension);
 
     if (strncmp(directory, "\0", 1) != 0 && strncmp(filename, "\0", 1) == 0) { //Check if name is subdirectory
-			printf("=======subdir attributes========\n");
       if (check_subdir(directory) != -1) {
         //Might want to return a structure with these fields
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
         return 0; //no error
       } else {
-				printf("=====didnt find subdir====\n");
         return -ENOENT;
       }
     } else if (strncmp(directory, "\0", 1) != 0 && strncmp(filename, "\0", 1) != 0) { //Check if name is a regular file
@@ -163,7 +161,6 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
 			if (blockNum > -1) {
 				//file IS in memory
 				//regular file, probably want to be read and write
-				printf("=========file attributes=========!!!!!!!!!!!\n");
 	      stbuf->st_mode = S_IFREG | 0666;
 	      stbuf->st_nlink = 1; //file links
 	      stbuf->st_size = 0; //file size - make sure you replace with real size!
@@ -174,7 +171,6 @@ static int cs1550_getattr(const char *path, struct stat *stbuf)
 			}
 	  } else {
       //Else return that path doesn't exist
-			printf("===path doesn't exist===");
       return -ENOENT;
     }
   }
@@ -335,14 +331,16 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 
   long nStartBlock = check_subdir(directory);
   if (nStartBlock != -1) { //if directory exists
-    //read in the corresponding cs1550_directory_entry
 		printf("========Directory exists==========\n");
+
+		//read in the corresponding cs1550_directory_entry
+		cs1550_directory_entry *dir = malloc(BLOCK_SIZE);
     FILE *disk = fopen(".disk", "rb+");
     fseek(disk, nStartBlock * BLOCK_SIZE, SEEK_SET);
-    cs1550_directory_entry *dir;
-    fread(&dir, BLOCK_SIZE, 1, disk);
+    fread(dir, BLOCK_SIZE, 1, disk);
     fclose(disk);
 
+		printf("=======READ========\n");
     //look for matching files in directory
     int i;
     for(i=0; i < dir->nFiles; i++) {
@@ -368,12 +366,11 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 		struct cs1550_index_block *indexBlock = malloc(BLOCK_SIZE);
 		printf("======file to disk======\n");
 		write_index_block(indexBlock, indexBlockLoc);
-
   } else {
     //throw error?
 		printf("===========cannot find directory============");
   }
-
+	printf("=======FINISH MKNOD========\n");
 	return 0;
 }
 
