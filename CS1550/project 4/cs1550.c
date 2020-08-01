@@ -196,7 +196,6 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	if (strcmp(path, "/") == 0) { //if root dir
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
-		printf("====ROOT====\n");
     cs1550_root_directory *root = open_root();
 		int i;
     for (i=0; i < root->nDirectories; i++) {
@@ -204,7 +203,6 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
 		free(root);
   } else { //subdirectory
-		printf("====SUBDIR====\n");
     char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
     char filename[MAX_FILENAME + 1];
     char extension[MAX_EXTENSION + 1];
@@ -212,7 +210,6 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
     int nStartBlock = check_subdir(directory);
     if (nStartBlock == -1) { //subdir not found
-			printf("===subdir not found===\n");
       return -ENOENT;
     }
     //else directory is in disk
@@ -221,14 +218,12 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 		cs1550_directory_entry *dir = open_dir(nStartBlock); //malloc's dir
 		int i;
-		printf("====%d files in directory====\n", dir->nFiles);
 		for(i=0; i < dir->nFiles; i++) {
 			char name[MAX_FILENAME + MAX_EXTENSION + 2]; //space for null term + .
-			strcpy(name, dir->files[i].fname);
-			printf("===FOUND A FILE===\n");
+			strncpy(name, dir->files[i].fname, MAX_FILENAME);
 			if (strncmp(dir->files[i].fext, "\0", 1) != 0) {
-				strcat(name, ".");
-				strcat(name, dir->files[i].fext);
+				strncat(name, ".", 1);
+				strncat(name, dir->files[i].fext, MAX_EXTENSION);
 			}
 			filler(buf, name, NULL, 0);
 		}
@@ -248,7 +243,6 @@ static int cs1550_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
  */
 static int cs1550_mkdir(const char *path, mode_t mode)
 {
-	printf("==========mkdir call============\n");
 	(void) path;
 	(void) mode;
 
@@ -291,7 +285,6 @@ static int cs1550_mkdir(const char *path, mode_t mode)
     FILE *disk = fopen(".disk", "r+b");
     fseek(disk, freeBlock * BLOCK_SIZE, SEEK_SET);
     fwrite(dir, BLOCK_SIZE, 1, disk); //write directory entry block
-		printf("======dir to disk======\n");
     fclose(disk);
 
   } else {
@@ -311,17 +304,15 @@ static int cs1550_mkdir(const char *path, mode_t mode)
  */
 static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 {
-	printf("=======mknod call========\n");
 	(void) mode;
 	(void) dev;
-	(void) path;
 
   char directory[MAX_FILENAME + 1]; //all strings need space for null terminator
-  char filename[MAX_FILENAME]; //removing th +1 helped with warnings for strcpy
-  char extension[MAX_EXTENSION]; //removing th +1 helped with warnings for strcpy
+  char filename[MAX_FILENAME + 1]; //removing th +1 helped with warnings for strcpy
+  char extension[MAX_EXTENSION + 1]; //removing th +1 helped with warnings for strcpy
   parse_path(path, directory, filename, extension);
 
-  if (strlen(directory) > MAX_FILENAME || strlen(extension) > MAX_EXTENSION) { //filename/ext too long
+  if (strlen(directory) > MAX_FILENAME || strlen(filename) > MAX_FILENAME || strlen(extension) > MAX_EXTENSION) { //dir/filename/ext too long
     return -ENAMETOOLONG;
   }
 
@@ -331,8 +322,6 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 
   long nStartBlock = check_subdir(directory);
   if (nStartBlock != -1) { //if directory exists
-		printf("========Directory exists==========\n");
-
 		//read in the corresponding cs1550_directory_entry
 		cs1550_directory_entry *dir = malloc(BLOCK_SIZE);
     FILE *disk = fopen(".disk", "rb+");
@@ -340,7 +329,6 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
     fread(dir, BLOCK_SIZE, 1, disk);
     fclose(disk);
 
-		printf("=======READ========\n");
     //look for matching files in directory
     int i;
     for(i=0; i < dir->nFiles; i++) {
@@ -353,24 +341,21 @@ static int cs1550_mknod(const char *path, mode_t mode, dev_t dev)
 		long indexBlockLoc = useNextFreeBlock();
 
 		//update directory entry
-    struct cs1550_file_directory new_file_dir;
-    strncpy(new_file_dir.fname, filename, MAX_FILENAME);
-    strncpy(new_file_dir.fext, extension, MAX_EXTENSION);
-		new_file_dir.fsize = 0;
-		new_file_dir.nIndexBlock = indexBlockLoc;
-    dir->files[dir->nFiles] = new_file_dir;
+    strncpy(dir->files[dir->nFiles].fname, filename, MAX_FILENAME);
+    strncpy(dir->files[dir->nFiles].fext, extension, MAX_EXTENSION);
+		dir->files[dir->nFiles].fsize = 0;
+		dir->files[dir->nFiles].nIndexBlock = indexBlockLoc;
+
 		dir->nFiles++;
 		write_directory_entry(dir, nStartBlock);
 
 		//create and write index block
 		struct cs1550_index_block *indexBlock = malloc(BLOCK_SIZE);
-		printf("======file to disk======\n");
 		write_index_block(indexBlock, indexBlockLoc);
   } else {
     //throw error?
 		printf("===========cannot find directory============");
   }
-	printf("=======FINISH MKNOD========\n");
 	return 0;
 }
 
@@ -407,10 +392,13 @@ static int cs1550_write(const char *path, const char *buf, size_t size, off_t of
 //HELPER FUNCTIONS =============================================================
 // parse the path name into directory, filename, and extension
 void parse_path(const char *path, char *directory, char *filename, char *extension) {
-  //make sure each ends with null terminator
-  directory[0] = '\0';
-  filename[0] = '\0';
-  extension[0] = '\0';
+  //clear each string
+	memset(directory, 0, strlen(directory));
+	memset(filename, 0, strlen(filename));
+	memset(extension, 0, strlen(extension));
+  // directory[0] = '\0';
+  // filename[0] = '\0';
+  // extension[0] = '\0';
   sscanf(path, "/%[^/]/%[^.].%s", directory, filename, extension); //read into variables
 }
 
