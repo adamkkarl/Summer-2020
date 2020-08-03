@@ -689,3 +689,11 @@ Page replacement algorithm
   page fault: page not found in memory
     is an interrupt
 
+8/3 Quiz
+A logical block number is an index relative to the beginning of a file: TRUE
+Linked allocation suffers from external fragmentation: FALSE
+A 32-bit logical address with 8KB page size will have 1M entries in page table: FALSE
+All addresses inside page table entries of a two-level page table are physical addresses: TRUE
+Fragmentation does not occur in a paging memory system: FALSE
+Optimal page replacement: is used for comparison with other page-replacement schemes
+In Not Frequently Used page replacement, which (Ref bit, dirty bit) pair is the worst to replace: (1,1)
